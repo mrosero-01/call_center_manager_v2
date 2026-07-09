@@ -1,0 +1,88 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+
+{% block title %}
+Call Centers | Call Center Manager
+{% endblock %}
+
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/callcenters.css' %}"
+>
+{% endblock %}
+
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="page-eyebrow">
+            Administración
+        </p>
+
+        <h1>
+            Call Centers
+        </h1>
+
+        <p class="page-description">
+            Selecciona un call center para consultar
+            o administrar su horario.
+        </p>
+    </div>
+</header>
+
+
+<section class="callcenter-list">
+    {% for callcenter in callcenters %}
+        <article class="callcenter-card">
+            <div class="callcenter-info">
+                <div class="callcenter-heading">
+                    <h2>
+                        {{ callcenter.name }}
+                    </h2>
+
+                    {% if callcenter.is_active %}
+                        <span class="status-badge status-active">
+                            Activo
+                        </span>
+                    {% else %}
+                        <span class="status-badge status-inactive">
+                            Inactivo
+                        </span>
+                    {% endif %}
+                </div>
+
+                <p class="callcenter-code">
+                    {{ callcenter.codename }}
+                </p>
+
+                <p class="callcenter-client">
+                    {{ callcenter.client.name }}
+                </p>
+            </div>
+
+            <div class="callcenter-actions">
+                <a
+                     href="{% url 'schedules:editor' callcenter.codename %}"
+                    class="primary-link"
+                >
+                    Gestionar horario
+                </a>
+            </div>
+        </article>
+    {% empty %}
+        <div class="empty-state">
+            <h2>
+                No hay call centers disponibles
+            </h2>
+
+            <p>
+                No tienes call centers asociados
+                actualmente.
+            </p>
+        </div>
+    {% endfor %}
+</section>
+{% endblock %}

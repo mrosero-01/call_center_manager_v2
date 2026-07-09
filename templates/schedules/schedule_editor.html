@@ -1,0 +1,468 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+
+{% block title %}
+Horario | {{ callcenter.name }}
+{% endblock %}
+
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/schedules.css' %}"
+>
+{% endblock %}
+
+
+{% block content %}
+<header class="schedule-page-header">
+    <h1>
+        {{ callcenter.name }}
+    </h1>
+
+    <p
+        id="schedule-description"
+        class="page-description"
+    >
+        Selecciona un día en el resumen superior y ajusta sus turnos.
+        Un día sin horarios se considera cerrado. Máximo 2 turnos por día.
+    </p>
+
+    {% if latest_change %}
+        <p class="last-change">
+            Último cambio:
+            <strong>
+                {{ latest_change.user }}
+            </strong>
+            · {{ latest_change.created_at|date:"d/m/Y H:i" }}
+            · {{ latest_change.reason }}
+        </p>
+    {% endif %}
+</header>
+
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div
+                class="message message-{{ message.tags }}"
+                role="status"
+                aria-live="polite"
+            >
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+
+{% if errors %}
+    <div
+        id="schedule-errors"
+        class="form-errors"
+        role="alert"
+        tabindex="-1"
+    >
+        <strong>
+            No pudimos guardar el horario.
+        </strong>
+
+        <p>
+            Corrige lo siguiente:
+        </p>
+
+        <ul>
+            {% for error in errors %}
+                <li>
+                    {{ error }}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+
+<form
+    method="post"
+    class="weekly-schedule"
+    data-schedule-form
+    aria-describedby="schedule-description"
+>
+    {% csrf_token %}
+
+    <section
+        class="week-overview"
+        aria-label="Resumen de la semana"
+    >
+        <p class="weekly-total">
+            Total horas semanales:
+            <strong data-week-total>
+                0h
+            </strong>
+        </p>
+
+        <div
+            class="day-tabs"
+            role="tablist"
+            aria-label="Días de la semana"
+        >
+            {% for day in weekly_sections %}
+                <button
+                    type="button"
+                    class="day-tab {% if day.intervals %}is-open{% else %}is-closed{% endif %}"
+                    data-select-day
+                    data-weekday="{{ day.value }}"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="day-panel-{{ day.value }}"
+                >
+                    <span class="day-tab-name">
+                        {{ day.label }}
+                    </span>
+
+                    <span
+                        class="day-tab-summary"
+                        data-day-tab-summary
+                    >
+                        {% if day.intervals %}
+                            {% for interval in day.intervals %}
+                                <span>
+                                    {{ interval.start_time }}-{{ interval.end_time }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            Cerrado
+                        {% endif %}
+                    </span>
+
+                    <span
+                        class="day-tab-action"
+                        aria-hidden="true"
+                    >
+                        Editar día
+                    </span>
+                </button>
+            {% endfor %}
+        </div>
+    </section>
+
+
+    <section class="day-editor-area">
+    {% for day in weekly_sections %}
+        <section
+            id="day-panel-{{ day.value }}"
+            class="day-panel {% if day.intervals %}is-open{% else %}is-closed{% endif %}"
+            data-day-card
+            data-weekday="{{ day.value }}"
+            data-day-label="{{ day.label }}"
+            aria-labelledby="day-{{ day.value }}-title"
+            role="tabpanel"
+            hidden
+        >
+            <header class="day-panel-header">
+                <div>
+                    <p class="panel-eyebrow">
+                        Día seleccionado
+                    </p>
+
+                    <h2 id="day-{{ day.value }}-title">
+                        {{ day.label }}
+                    </h2>
+                </div>
+
+            </header>
+
+            <div
+                class="day-state-control"
+                role="group"
+                aria-label="Estado de {{ day.label }}"
+            >
+                <span>
+                    Estado
+                </span>
+
+                <button
+                    type="button"
+                    class="state-button"
+                    data-set-day-state="open"
+                    aria-pressed="{% if day.intervals %}true{% else %}false{% endif %}"
+                >
+                    Abierto
+                </button>
+
+                <button
+                    type="button"
+                    class="state-button"
+                    data-set-day-state="closed"
+                    aria-pressed="{% if day.intervals %}false{% else %}true{% endif %}"
+                >
+                    Cerrado
+                </button>
+            </div>
+
+            <div
+                class="closed-editor-state"
+                data-closed-editor-state
+            >
+                <strong>
+                    Este día está cerrado.
+                </strong>
+
+                <span>
+                    No se recibirán llamadas en este call center.
+                </span>
+            </div>
+
+            <div
+                class="open-editor-section"
+                data-open-editor-section
+            >
+                <div
+                    class="interval-list"
+                    data-interval-list="{{ day.value }}"
+                >
+                    {% for interval in day.intervals %}
+                        <div
+                            class="interval-row"
+                            data-interval-row
+                        >
+                            <input
+                                type="hidden"
+                                name="weekday"
+                                value="{{ day.value }}"
+                            >
+
+                            <div class="time-range">
+                                <div class="time-field">
+                                    <label
+                                        class="sr-only"
+                                        for="start-{{ day.value }}-{{ forloop.counter }}"
+                                    >
+                                        Inicio
+                                    </label>
+
+                                    <input
+                                        id="start-{{ day.value }}-{{ forloop.counter }}"
+                                        type="time"
+                                        name="start_time"
+                                        value="{{ interval.start_time }}"
+                                        required
+                                        aria-label="Hora de inicio del turno {{ forloop.counter }} de {{ day.label }}"
+                                    >
+                                </div>
+
+                                <span
+                                    class="time-arrow"
+                                    aria-hidden="true"
+                                >
+                                    →
+                                </span>
+
+                                <div class="time-field">
+                                    <label
+                                        class="sr-only"
+                                        for="end-{{ day.value }}-{{ forloop.counter }}"
+                                    >
+                                        Fin
+                                    </label>
+
+                                    <input
+                                        id="end-{{ day.value }}-{{ forloop.counter }}"
+                                        type="time"
+                                        name="end_time"
+                                        value="{{ interval.end_time }}"
+                                        required
+                                        aria-label="Hora de fin del turno {{ forloop.counter }} de {{ day.label }}"
+                                    >
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="remove-button"
+                                    data-remove-interval
+                                    aria-label="Quitar turno {{ forloop.counter }} de {{ day.label }}"
+                                >
+                                    🗑
+                                </button>
+                            </div>
+
+                            <p
+                                class="interval-error"
+                                data-row-error
+                                role="alert"
+                            ></p>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <button
+                    type="button"
+                    class="add-button"
+                    data-add-interval
+                    data-weekday="{{ day.value }}"
+                    data-day-label="{{ day.label }}"
+                    aria-label="Añadir otro turno para {{ day.label }}"
+                >
+                    + Añadir otro turno
+                </button>
+
+                <p
+                    class="day-narrative"
+                    data-day-narrative
+                ></p>
+            </div>
+        </section>
+    {% endfor %}
+    </section>
+
+
+    <section
+        class="change-reason"
+        data-change-reason-section
+        aria-labelledby="change-reason-label"
+        {% if not errors and not change_reason %}hidden{% endif %}
+    >
+        <label
+            id="change-reason-label"
+            for="change-reason"
+        >
+            Motivo del cambio
+        </label>
+
+        <textarea
+            id="change-reason"
+            name="change_reason"
+            rows="2"
+            data-change-reason
+            placeholder="Ej: ajuste temporal por capacitación, festivo o cambio operativo."
+        >{{ change_reason }}</textarea>
+
+        <p>
+            Este motivo quedará registrado en el historial.
+        </p>
+    </section>
+
+
+    <div class="form-actions">
+        <span
+            class="unsaved-indicator"
+            data-unsaved-indicator
+            role="status"
+            aria-live="polite"
+        >
+            Todos los cambios guardados
+        </span>
+
+        <a
+            href="{% url 'callcenters:list' %}"
+            class="cancel-link"
+            aria-label="Cancelar y volver a call centers"
+        >
+            Cancelar
+        </a>
+
+        <button
+            type="submit"
+            class="save-button"
+            data-save-button
+            disabled
+        >
+            Guardar cambios
+        </button>
+    </div>
+</form>
+
+
+<div
+    class="schedule-dialog-backdrop"
+    data-unsaved-dialog
+    hidden
+>
+    <section
+        class="schedule-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="unsaved-dialog-title"
+        aria-describedby="unsaved-dialog-description"
+    >
+        <h2 id="unsaved-dialog-title">
+            Hay cambios sin guardar
+        </h2>
+
+        <p id="unsaved-dialog-description">
+            Guarda los cambios antes de salir o continúa editando.
+        </p>
+
+        <div class="schedule-dialog-actions">
+            <button
+                type="button"
+                class="dialog-secondary-button"
+                data-unsaved-dialog-cancel
+            >
+                Seguir editando
+            </button>
+
+            <button
+                type="button"
+                class="dialog-danger-button"
+                data-unsaved-dialog-confirm
+            >
+                Salir sin guardar
+            </button>
+        </div>
+    </section>
+</div>
+
+
+<div
+    class="schedule-dialog-backdrop"
+    data-close-day-dialog
+    hidden
+>
+    <section
+        class="schedule-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="close-day-dialog-title"
+        aria-describedby="close-day-dialog-description"
+    >
+        <h2
+            id="close-day-dialog-title"
+            data-close-day-title
+        >
+            Cerrar día
+        </h2>
+
+        <p
+            id="close-day-dialog-description"
+            data-close-day-description
+        >
+            Este día quedará sin atención configurada.
+        </p>
+
+        <div class="schedule-dialog-actions">
+            <button
+                type="button"
+                class="dialog-secondary-button"
+                data-close-day-cancel
+            >
+                Mantener abierto
+            </button>
+
+            <button
+                type="button"
+                class="dialog-danger-button"
+                data-close-day-confirm
+            >
+                Cerrar día
+            </button>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'js/schedules.js' %}"></script>
+{% endblock %}

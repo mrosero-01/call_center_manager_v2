@@ -1,0 +1,94 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}Call Center Manager{% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/base.css' %}"
+    >
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-mark">CM</span>
+
+                <div>
+                    <strong>Call Manager</strong>
+                    <small>Administración</small>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a
+                    href="{% url 'home' %}"
+                    class="nav-link {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}"
+                >
+                    Inicio
+                </a>
+
+                
+                <a
+                    href="{% url 'callcenters:list' %}"
+                    class="nav-link {% if request.resolver_match.namespace == 'callcenters' or request.resolver_match.namespace == 'schedules' %}is-active{% endif %}"
+                >
+                    Call Centers
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-summary">
+                    <strong>
+                        {{ request.user.get_full_name|default:request.user.username }}
+                    </strong>
+
+                    {% if request.user.client %}
+                        <small>
+                            {{ request.user.client.name }}
+                        </small>
+                    {% else %}
+                        <small>
+                            Administración general
+                        </small>
+                    {% endif %}
+                </div>
+
+                <form
+                    method="post"
+                    action="{% url 'logout' %}"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="logout-button"
+                    >
+                        Cerrar sesión
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <main class="app-main">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

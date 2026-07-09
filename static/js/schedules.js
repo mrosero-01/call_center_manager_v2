@@ -1,0 +1,1126 @@
+let intervalSequence = Date.now();
+let hasUnsavedChanges = false;
+let isSubmitting = false;
+const maxIntervalsPerDay = 2;
+
+
+const form = document.querySelector("[data-schedule-form]");
+const unsavedIndicator = document.querySelector(
+    "[data-unsaved-indicator]"
+);
+const saveButton = document.querySelector("[data-save-button]");
+const weekTotal = document.querySelector("[data-week-total]");
+const reasonInput = document.querySelector("[data-change-reason]");
+const reasonSection = document.querySelector(
+    "[data-change-reason-section]"
+);
+const unsavedDialog = document.querySelector(
+    "[data-unsaved-dialog]"
+);
+const unsavedDialogCancel = document.querySelector(
+    "[data-unsaved-dialog-cancel]"
+);
+const unsavedDialogConfirm = document.querySelector(
+    "[data-unsaved-dialog-confirm]"
+);
+const closeDayDialog = document.querySelector(
+    "[data-close-day-dialog]"
+);
+const closeDayDialogCancel = document.querySelector(
+    "[data-close-day-cancel]"
+);
+const closeDayDialogConfirm = document.querySelector(
+    "[data-close-day-confirm]"
+);
+const closeDayTitle = document.querySelector(
+    "[data-close-day-title]"
+);
+const closeDayDescription = document.querySelector(
+    "[data-close-day-description]"
+);
+let pendingUnsavedAction = null;
+let pendingClosePanel = null;
+let dialogReturnFocus = null;
+
+
+function timeToMinutes(value) {
+    if (!value) {
+        return null;
+    }
+
+    const parts = value.split(":");
+
+    if (parts.length !== 2) {
+        return null;
+    }
+
+    const minutes = (
+        Number(parts[0]) * 60
+        + Number(parts[1])
+    );
+
+    return Number.isNaN(minutes)
+        ? null
+        : minutes;
+}
+
+
+function minutesToDuration(minutes) {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+
+    if (rest === 0) {
+        return `${hours}h`;
+    }
+
+    return `${hours}h ${rest}m`;
+}
+
+
+function minutesToTime(minutes) {
+    const safeMinutes = Math.max(
+        0,
+        Math.min(
+            (23 * 60) + 59,
+            minutes
+        )
+    );
+    const hours = Math.floor(safeMinutes / 60);
+    const rest = safeMinutes % 60;
+
+    return [
+        String(hours).padStart(2, "0"),
+        String(rest).padStart(2, "0"),
+    ].join(":");
+}
+
+
+function getPanelRows(panel) {
+    return Array.from(
+        panel.querySelectorAll("[data-interval-row]")
+    );
+}
+
+
+function getRowTimes(row) {
+    const startInput = row.querySelector(
+        'input[name="start_time"]'
+    );
+
+    const endInput = row.querySelector(
+        'input[name="end_time"]'
+    );
+
+    return {
+        startInput,
+        endInput,
+        start: startInput ? startInput.value : "",
+        end: endInput ? endInput.value : "",
+        startMinutes: startInput
+            ? timeToMinutes(startInput.value)
+            : null,
+        endMinutes: endInput
+            ? timeToMinutes(endInput.value)
+            : null,
+    };
+}
+
+
+function getPanelRanges(panel) {
+    return getPanelRows(panel)
+        .map(getRowTimes)
+        .filter(function (range) {
+            return range.start && range.end;
+        })
+        .sort(function (first, second) {
+            return first.startMinutes - second.startMinutes;
+        });
+}
+
+
+function getValidPanelRanges(panel) {
+    return getPanelRanges(panel).filter(function (range) {
+        return (
+            range.startMinutes !== null
+            && range.endMinutes !== null
+            && range.startMinutes < range.endMinutes
+        );
+    });
+}
+
+
+function getDayTab(weekday) {
+    return document.querySelector(
+        `[data-select-day][data-weekday="${weekday}"]`
+    );
+}
+
+
+function getFocusableElements(container) {
+    return Array.from(
+        container.querySelectorAll(
+            [
+                "a[href]",
+                "button:not([disabled])",
+                "textarea:not([disabled])",
+                "input:not([disabled])",
+                "select:not([disabled])",
+                "[tabindex]:not([tabindex='-1'])",
+            ].join(", ")
+        )
+    );
+}
+
+
+function getOpenDialog() {
+    return document.querySelector(
+        ".schedule-dialog-backdrop:not([hidden])"
+    );
+}
+
+
+function trapDialogFocus(event) {
+    const openDialog = getOpenDialog();
+
+    if (!openDialog || event.key !== "Tab") {
+        return;
+    }
+
+    const focusableElements = getFocusableElements(openDialog);
+
+    if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[
+        focusableElements.length - 1
+    ];
+
+    if (
+        event.shiftKey
+        && document.activeElement === firstElement
+    ) {
+        event.preventDefault();
+        lastElement.focus();
+        return;
+    }
+
+    if (
+        !event.shiftKey
+        && document.activeElement === lastElement
+    ) {
+        event.preventDefault();
+        firstElement.focus();
+    }
+}
+
+
+function restoreDialogFocus() {
+    if (
+        dialogReturnFocus
+        && typeof dialogReturnFocus.focus === "function"
+    ) {
+        dialogReturnFocus.focus();
+    }
+
+    dialogReturnFocus = null;
+}
+
+
+function showUnsavedDialog(onConfirm) {
+    if (!unsavedDialog) {
+        onConfirm();
+        return;
+    }
+
+    pendingUnsavedAction = onConfirm;
+    dialogReturnFocus = document.activeElement;
+    unsavedDialog.hidden = false;
+
+    if (unsavedDialogCancel) {
+        unsavedDialogCancel.focus();
+    }
+}
+
+
+function closeUnsavedDialog() {
+    if (!unsavedDialog) {
+        return;
+    }
+
+    pendingUnsavedAction = null;
+    unsavedDialog.hidden = true;
+    restoreDialogFocus();
+}
+
+
+function confirmUnsavedDialog() {
+    const action = pendingUnsavedAction;
+
+    closeUnsavedDialog();
+
+    if (action) {
+        action();
+    }
+}
+
+
+function showCloseDayDialog(panel) {
+    if (!closeDayDialog) {
+        replacePanelRanges(panel, []);
+        markAsChanged();
+        return;
+    }
+
+    pendingClosePanel = panel;
+    dialogReturnFocus = document.activeElement;
+
+    if (closeDayTitle) {
+        closeDayTitle.textContent = (
+            `Cerrar ${panel.dataset.dayLabel}`
+        );
+    }
+
+    if (closeDayDescription) {
+        closeDayDescription.textContent = (
+            `${panel.dataset.dayLabel} quedará cerrado. `
+            + "No se recibirán llamadas ese día."
+        );
+    }
+
+    closeDayDialog.hidden = false;
+
+    if (closeDayDialogCancel) {
+        closeDayDialogCancel.focus();
+    }
+}
+
+
+function closeCloseDayDialog() {
+    if (!closeDayDialog) {
+        return;
+    }
+
+    pendingClosePanel = null;
+    closeDayDialog.hidden = true;
+    restoreDialogFocus();
+}
+
+
+function confirmCloseDayDialog() {
+    const panel = pendingClosePanel;
+
+    closeCloseDayDialog();
+
+    if (!panel) {
+        return;
+    }
+
+    replacePanelRanges(panel, []);
+    markAsChanged();
+}
+
+
+function shouldConfirmNavigation(event, link) {
+    const href = link.getAttribute("href");
+
+    return (
+        hasUnsavedChanges
+        && !isSubmitting
+        && href
+        && !href.startsWith("#")
+        && (!link.target || link.target === "_self")
+        && !event.metaKey
+        && !event.ctrlKey
+        && !event.shiftKey
+        && !event.altKey
+    );
+}
+
+
+function setTabSummary(tabSummary, lines) {
+    if (!tabSummary) {
+        return;
+    }
+
+    tabSummary.textContent = "";
+
+    lines.forEach(function (line) {
+        const item = document.createElement("span");
+
+        item.textContent = line;
+        tabSummary.appendChild(item);
+    });
+}
+
+
+function validateRow(row) {
+    const error = row.querySelector("[data-row-error]");
+    const times = getRowTimes(row);
+
+    if (!times.startInput || !times.endInput || !error) {
+        return true;
+    }
+
+    if (
+        times.startMinutes === null
+        || times.endMinutes === null
+        || times.startMinutes < times.endMinutes
+    ) {
+        times.endInput.setCustomValidity("");
+        row.classList.remove("has-error");
+        error.textContent = "";
+
+        return true;
+    }
+
+    const message = (
+        "La hora de cierre debe ser posterior "
+        + "a la apertura."
+    );
+
+    times.endInput.setCustomValidity(message);
+    row.classList.add("has-error");
+    error.textContent = message;
+
+    return false;
+}
+
+
+function hasScheduleErrors() {
+    let hasErrors = false;
+
+    document
+        .querySelectorAll("[data-interval-row]")
+        .forEach(function (row) {
+            if (!validateRow(row)) {
+                hasErrors = true;
+            }
+        });
+
+    return hasErrors;
+}
+
+
+function hasIntervalLimitErrors() {
+    return Array.from(
+        document.querySelectorAll("[data-day-card]")
+    ).some(function (panel) {
+        return getPanelRows(panel).length > maxIntervalsPerDay;
+    });
+}
+
+
+function updateSaveState() {
+    if (!saveButton) {
+        return;
+    }
+
+    const hasErrors = hasScheduleErrors();
+    const hasTooManyIntervals = hasIntervalLimitErrors();
+    const reasonMissing = (
+        reasonInput
+        && !reasonInput.value.trim()
+    );
+    const reasonIsVisible = (
+        reasonSection
+        && !reasonSection.hidden
+    );
+
+    if (reasonInput) {
+        reasonInput.setCustomValidity(
+            hasUnsavedChanges && reasonIsVisible && reasonMissing
+                ? "Escribe el motivo del cambio."
+                : ""
+        );
+    }
+
+    if (unsavedIndicator && hasUnsavedChanges) {
+        if (hasErrors) {
+            unsavedIndicator.textContent = (
+                "Corrige los horarios marcados"
+            );
+        } else if (hasTooManyIntervals) {
+            unsavedIndicator.textContent = (
+                `Máximo ${maxIntervalsPerDay} turnos por día`
+            );
+        } else if (reasonIsVisible && reasonMissing) {
+            unsavedIndicator.textContent = (
+                "Agrega un motivo para guardar"
+            );
+        } else {
+            unsavedIndicator.textContent = (
+                "Hay cambios sin guardar"
+            );
+        }
+    }
+
+    saveButton.disabled = (
+        !hasUnsavedChanges
+        || hasErrors
+        || hasTooManyIntervals
+        || (reasonIsVisible && reasonMissing)
+    );
+}
+
+
+function markAsChanged() {
+    hasUnsavedChanges = true;
+
+    if (unsavedIndicator) {
+        unsavedIndicator.hidden = false;
+        unsavedIndicator.classList.add("has-unsaved");
+        unsavedIndicator.textContent = "Hay cambios sin guardar";
+    }
+
+    updateSaveState();
+}
+
+
+function updateWeekTotal() {
+    let totalMinutes = 0;
+
+    document
+        .querySelectorAll("[data-day-card]")
+        .forEach(function (panel) {
+            getValidPanelRanges(panel).forEach(function (range) {
+                totalMinutes += (
+                    range.endMinutes
+                    - range.startMinutes
+                );
+            });
+        });
+
+    if (weekTotal) {
+        weekTotal.textContent = minutesToDuration(
+            totalMinutes
+        );
+    }
+}
+
+
+function updatePanelState(panel) {
+    const rows = getPanelRows(panel);
+    const isOpen = rows.length > 0;
+    const weekday = panel.dataset.weekday;
+    const tab = getDayTab(weekday);
+    const addButton = panel.querySelector("[data-add-interval]");
+
+    panel.classList.toggle("is-open", isOpen);
+    panel.classList.toggle("is-closed", !isOpen);
+
+    if (tab) {
+        tab.classList.toggle("is-open", isOpen);
+        tab.classList.toggle("is-closed", !isOpen);
+    }
+
+    panel
+        .querySelectorAll("[data-set-day-state]")
+        .forEach(function (button) {
+            const shouldPress = (
+                button.dataset.setDayState
+                === (isOpen ? "open" : "closed")
+            );
+
+            button.setAttribute(
+                "aria-pressed",
+                shouldPress ? "true" : "false"
+            );
+        });
+
+    if (addButton) {
+        const hasReachedLimit = rows.length >= maxIntervalsPerDay;
+
+        addButton.disabled = hasReachedLimit;
+        addButton.textContent = hasReachedLimit
+            ? `Máximo ${maxIntervalsPerDay} turnos por día`
+            : "+ Añadir otro turno";
+        addButton.setAttribute(
+            "aria-label",
+            hasReachedLimit
+                ? `Máximo ${maxIntervalsPerDay} turnos para este día`
+                : `Añadir otro turno para ${panel.dataset.dayLabel}`
+        );
+    }
+}
+
+
+function updatePanelText(panel) {
+    const rows = getPanelRows(panel);
+    const weekday = panel.dataset.weekday;
+    const dayLabel = panel.dataset.dayLabel;
+    const tab = getDayTab(weekday);
+    const tabSummary = tab
+        ? tab.querySelector("[data-day-tab-summary]")
+        : null;
+    const narrative = panel.querySelector(
+        "[data-day-narrative]"
+    );
+
+    rows.forEach(function (row, index) {
+        const removeButton = row.querySelector(
+            "[data-remove-interval]"
+        );
+
+        if (removeButton) {
+            removeButton.setAttribute(
+                "aria-label",
+                `Quitar turno ${index + 1} de ${dayLabel}`
+            );
+        }
+
+        validateRow(row);
+    });
+
+    const ranges = getValidPanelRanges(panel);
+    const hasTooManyIntervals = rows.length > maxIntervalsPerDay;
+    const hasInvalidRows = rows.some(function (row) {
+        return !validateRow(row);
+    });
+
+    if (ranges.length === 0) {
+        setTabSummary(
+            tabSummary,
+            [
+                hasInvalidRows
+                    ? "Revisar horario"
+                    : "Cerrado",
+            ]
+        );
+
+        if (narrative) {
+            narrative.textContent = hasInvalidRows
+                ? "Corrige el horario marcado para poder guardar."
+                : "";
+        }
+
+        return;
+    }
+
+    const summary = ranges.map(function (range) {
+        return `${range.start}-${range.end}`;
+    });
+
+    if (hasInvalidRows || hasTooManyIntervals) {
+        summary.push("Revisar");
+    }
+
+    setTabSummary(tabSummary, summary);
+
+    if (!narrative) {
+        return;
+    }
+
+    const parts = [];
+
+    ranges.forEach(function (range, index) {
+        parts.push(`de ${range.start} a ${range.end}`);
+
+        const nextRange = ranges[index + 1];
+
+        if (
+            nextRange
+            && range.endMinutes < nextRange.startMinutes
+        ) {
+            parts.push(
+                `(Pausa de ${minutesToDuration(
+                    nextRange.startMinutes - range.endMinutes
+                )})`
+            );
+        }
+    });
+
+    narrative.textContent = (
+        `Resumen: ${dayLabel} abierto `
+        + parts.join(" y ")
+        + (hasTooManyIntervals
+            ? `. Deja máximo ${maxIntervalsPerDay} turnos.`
+            : hasInvalidRows
+            ? ". Corrige los turnos marcados."
+            : ".")
+    );
+}
+
+
+function updateEverything() {
+    document
+        .querySelectorAll("[data-day-card]")
+        .forEach(function (panel) {
+            updatePanelState(panel);
+            updatePanelText(panel);
+        });
+
+    updateWeekTotal();
+    updateSaveState();
+}
+
+
+function selectDay(weekday) {
+    document
+        .querySelectorAll("[data-day-card]")
+        .forEach(function (panel) {
+            panel.hidden = (
+                panel.dataset.weekday !== weekday
+            );
+        });
+
+    document
+        .querySelectorAll("[data-select-day]")
+        .forEach(function (tab) {
+            const isSelected = (
+                tab.dataset.weekday === weekday
+            );
+
+            tab.setAttribute(
+                "aria-selected",
+                isSelected ? "true" : "false"
+            );
+        });
+}
+
+
+function createIntervalRow(weekday, dayLabel, start, end) {
+    intervalSequence += 1;
+
+    const intervalId = `${weekday}-${intervalSequence}`;
+    const row = document.createElement("div");
+
+    row.className = "interval-row";
+    row.dataset.intervalRow = "";
+
+    row.innerHTML = `
+        <input
+            type="hidden"
+            name="weekday"
+            value="${weekday}"
+        >
+
+        <div class="time-range">
+            <div class="time-field">
+                <label
+                    class="sr-only"
+                    for="start-${intervalId}"
+                >
+                    Inicio
+                </label>
+
+                <input
+                    id="start-${intervalId}"
+                    type="time"
+                    name="start_time"
+                    required
+                    aria-label="Hora de inicio de nuevo turno de ${dayLabel}"
+                >
+            </div>
+
+            <span
+                class="time-arrow"
+                aria-hidden="true"
+            >
+                →
+            </span>
+
+            <div class="time-field">
+                <label
+                    class="sr-only"
+                    for="end-${intervalId}"
+                >
+                    Fin
+                </label>
+
+                <input
+                    id="end-${intervalId}"
+                    type="time"
+                    name="end_time"
+                    required
+                    aria-label="Hora de fin de nuevo turno de ${dayLabel}"
+                >
+            </div>
+
+            <button
+                type="button"
+                class="remove-button"
+                data-remove-interval
+            >
+                🗑
+            </button>
+        </div>
+
+        <p
+            class="interval-error"
+            data-row-error
+            role="alert"
+        ></p>
+    `;
+
+    const startInput = row.querySelector(
+        'input[name="start_time"]'
+    );
+    const endInput = row.querySelector(
+        'input[name="end_time"]'
+    );
+
+    startInput.value = start || "08:00";
+    endInput.value = end || "18:00";
+
+    return row;
+}
+
+
+function replacePanelRanges(panel, ranges) {
+    const weekday = panel.dataset.weekday;
+    const dayLabel = panel.dataset.dayLabel;
+    const list = panel.querySelector(
+        `[data-interval-list="${weekday}"]`
+    );
+
+    list.innerHTML = "";
+
+    ranges.forEach(function (range) {
+        list.appendChild(
+            createIntervalRow(
+                weekday,
+                dayLabel,
+                range[0],
+                range[1]
+            )
+        );
+    });
+
+    updateEverything();
+}
+
+
+function setDayState(panel, state) {
+    if (state === "closed") {
+        const rows = getPanelRows(panel);
+
+        if (rows.length > 0) {
+            showCloseDayDialog(panel);
+            return;
+        }
+
+        replacePanelRanges(panel, []);
+        markAsChanged();
+        return;
+    }
+
+    const ranges = getPanelRanges(panel);
+
+    replacePanelRanges(
+        panel,
+        ranges.length > 0
+            ? ranges.map(function (range) {
+                return [range.start, range.end];
+            })
+            : [["08:00", "18:00"]]
+    );
+
+    markAsChanged();
+}
+
+
+function addInterval(panel) {
+    if (getPanelRows(panel).length >= maxIntervalsPerDay) {
+        updateEverything();
+        return;
+    }
+
+    const weekday = panel.dataset.weekday;
+    const dayLabel = panel.dataset.dayLabel;
+    const list = panel.querySelector(
+        `[data-interval-list="${weekday}"]`
+    );
+    const ranges = getValidPanelRanges(panel);
+    const lastRange = ranges[ranges.length - 1];
+
+    let start = "08:00";
+    let end = "18:00";
+
+    if (lastRange && lastRange.endMinutes < (23 * 60)) {
+        start = lastRange.end;
+        end = minutesToTime(lastRange.endMinutes + 60);
+    }
+
+    list.appendChild(
+        createIntervalRow(
+            weekday,
+            dayLabel,
+            start,
+            end
+        )
+    );
+
+    updateEverything();
+    markAsChanged();
+
+    const newInput = list.querySelector(
+        ".interval-row:last-child input[type='time']"
+    );
+
+    if (newInput) {
+        newInput.focus();
+    }
+}
+
+
+document.addEventListener(
+    "click",
+    function (event) {
+        const link = event.target.closest("a[href]");
+
+        if (link && shouldConfirmNavigation(event, link)) {
+            event.preventDefault();
+
+            showUnsavedDialog(function () {
+                isSubmitting = true;
+                window.location.href = link.href;
+            });
+
+            return;
+        }
+
+        const dayTab = event.target.closest(
+            "[data-select-day]"
+        );
+
+        if (dayTab) {
+            selectDay(dayTab.dataset.weekday);
+            return;
+        }
+
+        const stateButton = event.target.closest(
+            "[data-set-day-state]"
+        );
+
+        if (stateButton) {
+            setDayState(
+                stateButton.closest("[data-day-card]"),
+                stateButton.dataset.setDayState
+            );
+            return;
+        }
+
+        const addButton = event.target.closest(
+            "[data-add-interval]"
+        );
+
+        if (addButton) {
+            addInterval(
+                addButton.closest("[data-day-card]")
+            );
+            return;
+        }
+
+        const removeButton = event.target.closest(
+            "[data-remove-interval]"
+        );
+
+        if (removeButton) {
+            const panel = removeButton.closest(
+                "[data-day-card]"
+            );
+
+            removeButton
+                .closest("[data-interval-row]")
+                .remove();
+
+            updateEverything();
+            markAsChanged();
+            return;
+        }
+
+    }
+);
+
+
+document.addEventListener(
+    "submit",
+    function (event) {
+        const submittedForm = event.target;
+
+        if (
+            submittedForm === form
+            || !hasUnsavedChanges
+            || isSubmitting
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+
+        showUnsavedDialog(function () {
+            isSubmitting = true;
+            submittedForm.submit();
+        });
+    }
+);
+
+
+if (unsavedDialogCancel) {
+    unsavedDialogCancel.addEventListener(
+        "click",
+        closeUnsavedDialog
+    );
+}
+
+
+if (unsavedDialogConfirm) {
+    unsavedDialogConfirm.addEventListener(
+        "click",
+        confirmUnsavedDialog
+    );
+}
+
+
+if (closeDayDialogCancel) {
+    closeDayDialogCancel.addEventListener(
+        "click",
+        closeCloseDayDialog
+    );
+}
+
+
+if (closeDayDialogConfirm) {
+    closeDayDialogConfirm.addEventListener(
+        "click",
+        confirmCloseDayDialog
+    );
+}
+
+
+if (unsavedDialog) {
+    unsavedDialog.addEventListener(
+        "click",
+        function (event) {
+            if (event.target === unsavedDialog) {
+                closeUnsavedDialog();
+            }
+        }
+    );
+}
+
+
+if (closeDayDialog) {
+    closeDayDialog.addEventListener(
+        "click",
+        function (event) {
+            if (event.target === closeDayDialog) {
+                closeCloseDayDialog();
+            }
+        }
+    );
+}
+
+
+document.addEventListener(
+    "keydown",
+    function (event) {
+        trapDialogFocus(event);
+
+        if (
+            event.key === "Escape"
+        ) {
+            if (closeDayDialog && !closeDayDialog.hidden) {
+                closeCloseDayDialog();
+                return;
+            }
+
+            if (unsavedDialog && !unsavedDialog.hidden) {
+                closeUnsavedDialog();
+            }
+        }
+    }
+);
+
+
+if (form) {
+    form.addEventListener(
+        "input",
+        function (event) {
+            if (
+                event.target.matches(
+                    'input[name="start_time"], input[name="end_time"], textarea[name="change_reason"]'
+                )
+            ) {
+                updateEverything();
+                markAsChanged();
+            }
+        }
+    );
+
+    form.addEventListener(
+        "submit",
+        function (event) {
+            const reasonMissing = (
+                reasonInput
+                && !reasonInput.value.trim()
+            );
+
+            if (
+                hasScheduleErrors()
+                || hasIntervalLimitErrors()
+            ) {
+                event.preventDefault();
+                updateSaveState();
+                return;
+            }
+
+            if (reasonMissing) {
+                event.preventDefault();
+
+                if (reasonSection) {
+                    reasonSection.hidden = false;
+                }
+
+                updateSaveState();
+
+                if (reasonInput) {
+                    reasonInput.reportValidity();
+                    reasonInput.focus();
+                }
+
+                return;
+            }
+
+            isSubmitting = true;
+        }
+    );
+}
+
+
+window.addEventListener(
+    "beforeunload",
+    function (event) {
+        if (
+            !hasUnsavedChanges
+            || isSubmitting
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        event.returnValue = "";
+    }
+);
+
+
+const firstOpenPanel = document.querySelector(
+    "[data-day-card].is-open"
+);
+const firstPanel = document.querySelector("[data-day-card]");
+const errorSummary = document.querySelector("#schedule-errors");
+
+updateEverything();
+
+if (firstOpenPanel || firstPanel) {
+    selectDay(
+        (firstOpenPanel || firstPanel).dataset.weekday
+    );
+}
+
+if (errorSummary) {
+    errorSummary.focus();
+}

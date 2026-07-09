@@ -1,0 +1,72 @@
+{% extends "layout/base.html" %}
+
+{% block title %}
+Inicio | Call Center Manager
+{% endblock %}
+
+
+{% block content %}
+<header class="page-header">
+    <div>
+        <p class="page-eyebrow">
+            Administración
+        </p>
+
+        <h1>
+            Buenos días,
+            {{ request.user.first_name|default:request.user.username }}
+        </h1>
+
+        <p class="page-description">
+            Administra los call centers y sus horarios
+            desde un solo lugar.
+        </p>
+    </div>
+</header>
+
+
+<section class="quick-actions">
+    <article class="action-card">
+        <div>
+            <span class="action-label">
+                Call Centers
+            </span>
+
+            <h2>
+                Administrar call centers
+            </h2>
+
+            <p>
+                Consulta los centros disponibles y su
+                configuración general.
+            </p>
+        </div>
+
+        <a href="{% url 'callcenters:list' %}">
+            Ver call centers
+        </a>
+    </article>
+
+
+    <article class="action-card">
+        <div>
+            <span class="action-label">
+                Horarios
+            </span>
+
+            <h2>
+                Gestionar horarios
+            </h2>
+
+            <p>
+                Define fácilmente las franjas de atención
+                de cada día.
+            </p>
+        </div>
+
+        <a href="#">
+            Administrar horarios
+        </a>
+    </article>
+</section>
+{% endblock %}

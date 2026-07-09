@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ScheduleInterval
+from .models import ScheduleChangeLog, ScheduleInterval
 
 
 @admin.register(ScheduleInterval)
@@ -26,4 +26,36 @@ class ScheduleIntervalAdmin(admin.ModelAdmin):
         "callcenter",
         "weekday",
         "start_time",
+    )
+
+
+@admin.register(ScheduleChangeLog)
+class ScheduleChangeLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "callcenter",
+        "user",
+        "created_at",
+    )
+
+    list_filter = (
+        "callcenter",
+        "created_at",
+    )
+
+    search_fields = (
+        "callcenter__name",
+        "callcenter__codename",
+        "user__username",
+        "reason",
+    )
+
+    readonly_fields = (
+        "callcenter",
+        "user",
+        "reason",
+        "created_at",
+    )
+
+    ordering = (
+        "-created_at",
     )

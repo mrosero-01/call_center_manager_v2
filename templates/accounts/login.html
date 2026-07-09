@@ -1,0 +1,88 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Iniciar sesión | Call Center Manager</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/base.css' %}"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/login.css' %}"
+    >
+</head>
+
+<body class="login-page">
+    <main class="login-container">
+        <section class="login-panel">
+            <div class="login-brand">
+                <span class="brand-mark">
+                    CM
+                </span>
+
+                <strong>
+                    Call Center Manager
+                </strong>
+            </div>
+
+            <div class="login-heading">
+                <h1>
+                    Iniciar sesión
+                </h1>
+
+                <p>
+                    Ingresa con tu usuario para administrar
+                    tus call centers.
+                </p>
+            </div>
+
+            {% if form.errors %}
+                <div class="form-error">
+                    Usuario o contraseña incorrectos.
+                </div>
+            {% endif %}
+
+            <form
+                method="post"
+                class="login-form"
+            >
+                {% csrf_token %}
+
+                <div class="form-field">
+                    <label for="{{ form.username.id_for_label }}">
+                        Usuario
+                    </label>
+
+                    {{ form.username }}
+                </div>
+
+                <div class="form-field">
+                    <label for="{{ form.password.id_for_label }}">
+                        Contraseña
+                    </label>
+
+                    {{ form.password }}
+                </div>
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Ingresar
+                </button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

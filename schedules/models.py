@@ -1,6 +1,7 @@
+from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
-# Create your models here.
+
 
 class Weekday(models.TextChoices):
     MONDAY = "Mon", "Lunes"
@@ -54,4 +55,35 @@ class ScheduleInterval(models.Model):
             f"{self.callcenter.codename} - "
             f"{self.weekday} "
             f"{self.start_time:%H:%M}-{self.end_time:%H:%M}"
+        )
+
+
+class ScheduleChangeLog(models.Model):
+    callcenter = models.ForeignKey(
+        "callcenters.CallCenter",
+        on_delete=models.PROTECT,
+        related_name="schedule_change_logs",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="schedule_change_logs",
+        null=True,
+        blank=True,
+    )
+
+    reason = models.TextField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = (
+            "-created_at",
+        )
+
+    def __str__(self):
+        return (
+            f"{self.callcenter.codename} - "
+            f"{self.created_at:%Y-%m-%d %H:%M}"
         )

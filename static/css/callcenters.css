@@ -1,0 +1,116 @@
+.callcenter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.callcenter-card {
+    width: 100%;
+    padding: 22px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.callcenter-info {
+    min-width: 0;
+}
+
+.callcenter-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.callcenter-heading h2 {
+    margin: 0;
+    font-size: 19px;
+}
+
+.callcenter-code {
+    margin: 8px 0 0;
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.callcenter-client {
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.status-badge {
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-active {
+    background: #e8f7ee;
+    color: #227443;
+}
+
+.status-inactive {
+    background: #f1f2f4;
+    color: #686d76;
+}
+
+.callcenter-actions {
+    flex-shrink: 0;
+}
+
+.primary-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.primary-link:hover {
+    background: var(--accent-hover);
+}
+
+.empty-state {
+    padding: 48px 28px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    text-align: center;
+}
+
+.empty-state h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.empty-state p {
+    margin: 10px 0 0;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 700px) {
+    .callcenter-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .callcenter-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .primary-link {
+        width: 100%;
+        justify-content: center;
+    }
+}
