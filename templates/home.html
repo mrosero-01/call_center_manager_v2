@@ -1,72 +1,168 @@
 {% extends "layout/base.html" %}
+{% load static %}
 
 {% block title %}
 Inicio | Call Center Manager
 {% endblock %}
 
 
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/home.css' %}"
+>
+{% endblock %}
+
+
 {% block content %}
-<header class="page-header">
-    <div>
+<div class="home-dashboard">
+    <header class="page-header home-header">
         <p class="page-eyebrow">
             Administración
         </p>
 
         <h1>
-            Buenos días,
+            {{ greeting }},
             {{ request.user.first_name|default:request.user.username }}
         </h1>
 
         <p class="page-description">
-            Administra los call centers y sus horarios
-            desde un solo lugar.
+            Administra los call centers y sus horarios.
         </p>
-    </div>
-</header>
+    </header>
 
 
-<section class="quick-actions">
-    <article class="action-card">
-        <div>
-            <span class="action-label">
-                Call Centers
+    <section
+        class="summary-grid"
+        aria-label="Resumen"
+    >
+        <article class="summary-card">
+            <span>
+                Call centers
             </span>
 
-            <h2>
-                Administrar call centers
-            </h2>
+            <strong>
+                {{ dashboard_summary.callcenters }}
+            </strong>
+        </article>
 
-            <p>
-                Consulta los centros disponibles y su
-                configuración general.
-            </p>
-        </div>
-
-        <a href="{% url 'callcenters:list' %}">
-            Ver call centers
-        </a>
-    </article>
-
-
-    <article class="action-card">
-        <div>
-            <span class="action-label">
-                Horarios
+        <article class="summary-card">
+            <span>
+                Activos
             </span>
 
-            <h2>
-                Gestionar horarios
+            <strong>
+                {{ dashboard_summary.active }}
+            </strong>
+        </article>
+
+        <article class="summary-card">
+            <span>
+                Sin horario
+            </span>
+
+            <strong>
+                {{ dashboard_summary.without_schedule }}
+            </strong>
+        </article>
+    </section>
+
+
+    <section
+        class="home-callcenters"
+        aria-labelledby="home-callcenters-title"
+    >
+        <div class="section-heading">
+            <h2 id="home-callcenters-title">
+                Call centers disponibles
             </h2>
 
-            <p>
-                Define fácilmente las franjas de atención
-                de cada día.
-            </p>
+            <a href="{% url 'callcenters:list' %}">
+                Ver todos
+            </a>
         </div>
 
-        <a href="#">
-            Administrar horarios
-        </a>
-    </article>
-</section>
+        {% if callcenter_cards %}
+            <div class="callcenter-preview-list">
+                {% for item in callcenter_cards %}
+                    <article class="callcenter-preview-card">
+                        <div class="callcenter-preview-main">
+                            <div>
+                                <div class="callcenter-preview-title">
+                                    <h3>
+                                        {{ item.callcenter.name }}
+                                    </h3>
+
+                                    <span class="status-badge {% if item.callcenter.is_active %}is-active{% else %}is-inactive{% endif %}">
+                                        {% if item.callcenter.is_active %}
+                                            Activo
+                                        {% else %}
+                                            Inactivo
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                <p class="callcenter-code">
+                                    {{ item.callcenter.codename }}
+                                </p>
+                            </div>
+
+                            <div class="schedule-preview">
+                                {% if item.schedule.has_schedule %}
+                                    <p class="schedule-status">
+                                        Horario configurado
+                                    </p>
+
+                                    <div class="schedule-lines">
+                                        {% for day in item.schedule.days %}
+                                            <p>
+                                                <strong>
+                                                    {{ day.label }}:
+                                                </strong>
+                                                {{ day.summary }}
+                                            </p>
+                                        {% endfor %}
+
+                                        {% if item.schedule.extra_days %}
+                                            <p class="more-days">
+                                                + {{ item.schedule.extra_days }}
+                                                días más
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <p class="schedule-status no-schedule">
+                                        Sin horario configurado
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <a
+                            class="schedule-action"
+                            href="{% url 'schedules:editor' item.callcenter.codename %}"
+                        >
+                            {% if item.schedule.has_schedule %}
+                                Gestionar horario
+                            {% else %}
+                                Configurar horario
+                            {% endif %}
+                        </a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <strong>
+                    No hay call centers disponibles.
+                </strong>
+
+                <p>
+                    Cuando exista al menos un call center visible,
+                    aparecerá en este resumen.
+                </p>
+            </div>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}

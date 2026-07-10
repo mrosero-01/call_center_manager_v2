@@ -1,0 +1,261 @@
+.home-dashboard {
+    width: 100%;
+    max-width: 1400px;
+}
+
+.home-header {
+    margin-bottom: 22px;
+}
+
+.home-header h1 {
+    font-size: 28px;
+}
+
+.home-header .page-description {
+    max-width: 560px;
+    font-size: 15px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 180px));
+    gap: 12px;
+    margin-bottom: 26px;
+}
+
+.summary-card {
+    min-height: 78px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.summary-card span {
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.summary-card strong {
+    color: var(--text-primary);
+    font-size: 25px;
+    line-height: 1;
+}
+
+.home-callcenters {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.section-heading h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 19px;
+    line-height: 1.2;
+}
+
+.section-heading a {
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.section-heading a:hover {
+    color: var(--accent-hover);
+}
+
+.callcenter-preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.callcenter-preview-card,
+.empty-state {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.callcenter-preview-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px;
+    align-items: end;
+}
+
+.callcenter-preview-main {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1.2fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.callcenter-preview-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.callcenter-preview-title h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 17px;
+    line-height: 1.25;
+}
+
+.status-badge {
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.status-badge.is-active {
+    background: #e8f7ee;
+    color: #227443;
+}
+
+.status-badge.is-inactive {
+    background: #f1f2f4;
+    color: #5f6570;
+}
+
+.callcenter-code {
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+    font-size: 13px;
+}
+
+.schedule-preview {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.schedule-status {
+    margin: 0 0 7px;
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+.schedule-status.no-schedule {
+    width: fit-content;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #fff7e8;
+    color: #8a5a00;
+}
+
+.schedule-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.schedule-lines p {
+    margin: 0;
+    line-height: 1.35;
+}
+
+.schedule-lines strong {
+    color: var(--text-primary);
+}
+
+.more-days {
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.schedule-action {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.schedule-action:hover {
+    background: var(--accent-hover);
+}
+
+.empty-state {
+    color: var(--text-secondary);
+}
+
+.empty-state strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    margin: 0;
+}
+
+@media (max-width: 1120px) {
+    .callcenter-preview-card,
+    .callcenter-preview-main {
+        grid-template-columns: 1fr;
+    }
+
+    .callcenter-preview-card {
+        align-items: stretch;
+    }
+
+    .schedule-action {
+        width: fit-content;
+    }
+}
+
+@media (max-width: 760px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-card {
+        min-height: 68px;
+    }
+
+    .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .callcenter-preview-card,
+    .empty-state {
+        padding: 14px;
+    }
+
+    .schedule-action {
+        width: 100%;
+    }
+}
