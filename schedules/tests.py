@@ -64,7 +64,7 @@ class ScheduleEditorTests(TestCase):
             0,
         )
 
-    def test_limits_intervals_to_two_per_day(self):
+    def test_allows_more_than_two_intervals_per_day(self):
         response = self.post_schedule(
             [
                 Weekday.MONDAY,
@@ -84,14 +84,16 @@ class ScheduleEditorTests(TestCase):
             "Ajuste operativo",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            "solo puedes configurar hasta 2 turnos",
+        self.assertEqual(
+            response.status_code,
+            302,
         )
         self.assertEqual(
-            ScheduleInterval.objects.count(),
-            0,
+            ScheduleInterval.objects.filter(
+                callcenter=self.callcenter,
+                weekday=Weekday.MONDAY,
+            ).count(),
+            3,
         )
 
     def test_rejects_end_time_before_or_equal_start_time(self):

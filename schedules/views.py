@@ -10,9 +10,6 @@ from callcenters.selectors import get_callcenter_for_user
 from .models import ScheduleChangeLog, ScheduleInterval, Weekday
 
 
-MAX_INTERVALS_PER_DAY = 2
-
-
 WEEKDAYS = [
     {
         "value": Weekday.MONDAY,
@@ -207,25 +204,6 @@ def _validate_overlaps(intervals):
     return errors
 
 
-def _validate_interval_counts(intervals):
-    errors = []
-    counts = {}
-
-    for interval in intervals:
-        counts[interval["weekday"]] = (
-            counts.get(interval["weekday"], 0) + 1
-        )
-
-    for weekday, count in counts.items():
-        if count > MAX_INTERVALS_PER_DAY:
-            errors.append(
-                f"En {WEEKDAY_LABELS[weekday]}, solo puedes "
-                f"configurar hasta {MAX_INTERVALS_PER_DAY} turnos."
-            )
-
-    return errors
-
-
 def _parse_schedule_post(post_data):
     weekdays = post_data.getlist("weekday")
     start_times = post_data.getlist("start_time")
@@ -304,10 +282,6 @@ def _parse_schedule_post(post_data):
                 "end_time_raw": end_time_raw,
             }
         )
-
-    errors.extend(
-        _validate_interval_counts(raw_rows)
-    )
 
     errors.extend(
         _validate_overlaps(intervals)

@@ -1,11 +1,16 @@
+.app-main {
+    padding-top: 36px;
+    padding-bottom: 32px;
+}
+
 .schedule-page-header {
     max-width: 980px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .schedule-page-header h1 {
     margin: 0;
-    font-size: 32px;
+    font-size: 28px;
     line-height: 1.2;
 }
 
@@ -41,21 +46,21 @@
 .weekly-schedule {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding-bottom: 96px;
+    gap: 12px;
+    padding-bottom: 84px;
 }
 
 .week-overview {
-    padding: 18px;
+    padding: 14px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--surface);
 }
 
 .weekly-total {
-    margin: 0 0 14px;
+    margin: 0 0 10px;
     color: var(--text-primary);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 800;
 }
 
@@ -66,13 +71,13 @@
 .day-tabs {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
 }
 
 .day-tab {
     position: relative;
-    min-height: 112px;
-    padding: 12px;
+    min-height: 82px;
+    padding: 10px;
     border: 2px solid transparent;
     border-radius: 8px;
     background: #f1f2f4;
@@ -81,8 +86,8 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: flex-start;
+    gap: 12px;
     text-align: left;
     cursor: pointer;
     transition:
@@ -103,6 +108,10 @@
 .day-tab[aria-selected="true"] {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(49, 87, 213, 0.14);
+}
+
+.day-tab[aria-current="true"] {
+    background: #eef3ff;
 }
 
 .day-tab:hover {
@@ -127,33 +136,11 @@
 
 .day-tab-summary {
     color: var(--text-secondary);
-    font-size: 13px;
-    line-height: 1.35;
+    font-size: 12px;
+    line-height: 1.3;
     display: flex;
     flex-direction: column;
     gap: 2px;
-}
-
-.day-tab-action {
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: 800;
-    opacity: 0;
-    transform: translateY(2px);
-    transition:
-        opacity 160ms ease,
-        transform 160ms ease;
-}
-
-.day-tab:hover .day-tab-action,
-.day-tab:focus-visible .day-tab-action,
-.day-tab[aria-selected="true"] .day-tab-action {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.day-tab[aria-selected="true"] .day-tab-action {
-    color: var(--accent-hover);
 }
 
 .day-editor-area {
@@ -161,7 +148,7 @@
 }
 
 .day-panel {
-    padding: 20px;
+    padding: 16px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--surface);
@@ -172,7 +159,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .panel-eyebrow {
@@ -184,7 +171,7 @@
 
 .day-panel h2 {
     margin: 0;
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1.15;
 }
 
@@ -193,7 +180,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .day-state-control span {
@@ -206,8 +193,8 @@
 .state-button,
 .add-button,
 .save-button {
-    min-height: 44px;
-    padding: 0 16px;
+    min-height: 40px;
+    padding: 0 14px;
     border-radius: 8px;
     font: inherit;
     font-weight: 700;
@@ -253,7 +240,7 @@
 }
 
 .closed-editor-state {
-    padding: 16px 18px;
+    padding: 14px 16px;
     border: 1px solid #e0e2e7;
     border-radius: 8px;
     background: #f1f2f4;
@@ -270,12 +257,12 @@
 .interval-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .interval-row {
     position: relative;
-    padding: 14px 16px;
+    padding: 12px 14px;
     border: 1px solid #e6ebf5;
     border-left: 4px solid #9fb3ff;
     border-radius: 8px;
@@ -291,23 +278,23 @@
 .time-range {
     display: grid;
     grid-template-columns:
-        minmax(150px, 220px)
-        42px
-        minmax(150px, 220px)
-        38px;
+        minmax(140px, 210px)
+        38px
+        minmax(140px, 210px)
+        36px;
     align-items: end;
     gap: 10px;
 }
 
 .time-field input {
     width: 100%;
-    min-height: 48px;
+    min-height: 44px;
     padding: 0 12px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: #ffffff;
     color: var(--text-primary);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
 }
 
@@ -322,8 +309,8 @@
 
 .time-arrow {
     align-self: center;
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     border-radius: 999px;
     background: #eef3ff;
     color: var(--accent);
@@ -379,28 +366,16 @@
 
 .add-button {
     width: 100%;
-    margin-top: 14px;
+    margin-top: 12px;
     border-style: dashed;
     border-color: #b8c8ff;
     background: #f7f9ff;
     color: var(--accent);
 }
 
-.add-button:disabled {
-    border-style: solid;
-    border-color: #dfe2e8;
-    background: #f4f5f7;
-    color: #747b86;
-    cursor: not-allowed;
-}
-
-.add-button:disabled:hover {
-    background: #f4f5f7;
-}
-
 .day-narrative {
-    margin: 14px 0 0;
-    padding: 12px 14px;
+    margin: 12px 0 0;
+    padding: 10px 12px;
     border: 1px solid #dce5ff;
     border-radius: 8px;
     background: #f7f9ff;
@@ -444,7 +419,7 @@
 }
 
 .change-reason {
-    padding: 16px 18px;
+    padding: 14px 16px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--surface);
@@ -503,8 +478,8 @@
 .form-actions {
     position: sticky;
     z-index: 10;
-    bottom: 16px;
-    padding: 12px 14px;
+    bottom: 12px;
+    padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--surface);
@@ -639,7 +614,7 @@
 
 @media (max-width: 760px) {
     .schedule-page-header h1 {
-        font-size: 28px;
+        font-size: 26px;
     }
 
     .week-overview,
@@ -656,12 +631,7 @@
     }
 
     .day-tab {
-        min-height: 104px;
-    }
-
-    .day-tab-action {
-        opacity: 1;
-        transform: none;
+        min-height: 86px;
     }
 
     .day-panel-header {

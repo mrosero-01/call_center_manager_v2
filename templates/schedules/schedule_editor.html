@@ -25,8 +25,8 @@ Horario | {{ callcenter.name }}
         id="schedule-description"
         class="page-description"
     >
-        Selecciona un día en el resumen superior y ajusta sus turnos.
-        Un día sin horarios se considera cerrado. Máximo 2 turnos por día.
+        Selecciona un día y configura sus horarios de atención.
+        Un día sin horarios se considera cerrado.
     </p>
 
     {% if latest_change %}
@@ -115,6 +115,7 @@ Horario | {{ callcenter.name }}
                     data-weekday="{{ day.value }}"
                     role="tab"
                     aria-selected="false"
+                    aria-current="false"
                     aria-controls="day-panel-{{ day.value }}"
                 >
                     <span class="day-tab-name">
@@ -134,13 +135,6 @@ Horario | {{ callcenter.name }}
                         {% else %}
                             Cerrado
                         {% endif %}
-                    </span>
-
-                    <span
-                        class="day-tab-action"
-                        aria-hidden="true"
-                    >
-                        Editar día
                     </span>
                 </button>
             {% endfor %}
@@ -248,7 +242,7 @@ Horario | {{ callcenter.name }}
                                         name="start_time"
                                         value="{{ interval.start_time }}"
                                         required
-                                        aria-label="Hora de inicio del turno {{ forloop.counter }} de {{ day.label }}"
+                                        aria-label="Hora de apertura del horario {{ forloop.counter }} de {{ day.label }}"
                                     >
                                 </div>
 
@@ -273,7 +267,7 @@ Horario | {{ callcenter.name }}
                                         name="end_time"
                                         value="{{ interval.end_time }}"
                                         required
-                                        aria-label="Hora de fin del turno {{ forloop.counter }} de {{ day.label }}"
+                                        aria-label="Hora de cierre del horario {{ forloop.counter }} de {{ day.label }}"
                                     >
                                 </div>
 
@@ -281,7 +275,7 @@ Horario | {{ callcenter.name }}
                                     type="button"
                                     class="remove-button"
                                     data-remove-interval
-                                    aria-label="Quitar turno {{ forloop.counter }} de {{ day.label }}"
+                                    aria-label="Quitar horario {{ forloop.counter }} de {{ day.label }}"
                                 >
                                     🗑
                                 </button>
@@ -302,9 +296,9 @@ Horario | {{ callcenter.name }}
                     data-add-interval
                     data-weekday="{{ day.value }}"
                     data-day-label="{{ day.label }}"
-                    aria-label="Añadir otro turno para {{ day.label }}"
+                    aria-label="Agregar horario para {{ day.label }}"
                 >
-                    + Añadir otro turno
+                    + Agregar horario
                 </button>
 
                 <p
@@ -438,7 +432,8 @@ Horario | {{ callcenter.name }}
             id="close-day-dialog-description"
             data-close-day-description
         >
-            Este día quedará sin atención configurada.
+            Este día tiene horarios configurados.
+            ¿Deseas marcarlo como cerrado y quitar esos horarios?
         </p>
 
         <div class="schedule-dialog-actions">
@@ -455,7 +450,7 @@ Horario | {{ callcenter.name }}
                 class="dialog-danger-button"
                 data-close-day-confirm
             >
-                Cerrar día
+                Marcar cerrado
             </button>
         </div>
     </section>

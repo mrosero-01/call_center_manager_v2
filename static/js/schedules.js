@@ -1,7 +1,6 @@
 let intervalSequence = Date.now();
 let hasUnsavedChanges = false;
 let isSubmitting = false;
-const maxIntervalsPerDay = 2;
 
 
 const form = document.querySelector("[data-schedule-form]");
@@ -285,8 +284,8 @@ function showCloseDayDialog(panel) {
 
     if (closeDayDescription) {
         closeDayDescription.textContent = (
-            `${panel.dataset.dayLabel} quedará cerrado. `
-            + "No se recibirán llamadas ese día."
+            "Este día tiene horarios configurados. "
+            + "¿Deseas marcarlo como cerrado y quitar esos horarios?"
         );
     }
 
@@ -364,11 +363,33 @@ function validateRow(row) {
         return true;
     }
 
+    if (!times.start || !times.end) {
+        const message = "Completa la hora de apertura y cierre.";
+
+        row.classList.add("has-error");
+        error.textContent = message;
+
+        if (!times.start) {
+            times.startInput.setCustomValidity(message);
+        } else {
+            times.startInput.setCustomValidity("");
+        }
+
+        if (!times.end) {
+            times.endInput.setCustomValidity(message);
+        } else {
+            times.endInput.setCustomValidity("");
+        }
+
+        return false;
+    }
+
     if (
         times.startMinutes === null
         || times.endMinutes === null
         || times.startMinutes < times.endMinutes
     ) {
+        times.startInput.setCustomValidity("");
         times.endInput.setCustomValidity("");
         row.classList.remove("has-error");
         error.textContent = "";
@@ -381,6 +402,7 @@ function validateRow(row) {
         + "a la apertura."
     );
 
+    times.startInput.setCustomValidity("");
     times.endInput.setCustomValidity(message);
     row.classList.add("has-error");
     error.textContent = message;
@@ -404,22 +426,12 @@ function hasScheduleErrors() {
 }
 
 
-function hasIntervalLimitErrors() {
-    return Array.from(
-        document.querySelectorAll("[data-day-card]")
-    ).some(function (panel) {
-        return getPanelRows(panel).length > maxIntervalsPerDay;
-    });
-}
-
-
 function updateSaveState() {
     if (!saveButton) {
         return;
     }
 
     const hasErrors = hasScheduleErrors();
-    const hasTooManyIntervals = hasIntervalLimitErrors();
     const reasonMissing = (
         reasonInput
         && !reasonInput.value.trim()
@@ -442,10 +454,6 @@ function updateSaveState() {
             unsavedIndicator.textContent = (
                 "Corrige los horarios marcados"
             );
-        } else if (hasTooManyIntervals) {
-            unsavedIndicator.textContent = (
-                `Máximo ${maxIntervalsPerDay} turnos por día`
-            );
         } else if (reasonIsVisible && reasonMissing) {
             unsavedIndicator.textContent = (
                 "Agrega un motivo para guardar"
@@ -460,7 +468,6 @@ function updateSaveState() {
     saveButton.disabled = (
         !hasUnsavedChanges
         || hasErrors
-        || hasTooManyIntervals
         || (reasonIsVisible && reasonMissing)
     );
 }
@@ -531,17 +538,11 @@ function updatePanelState(panel) {
         });
 
     if (addButton) {
-        const hasReachedLimit = rows.length >= maxIntervalsPerDay;
-
-        addButton.disabled = hasReachedLimit;
-        addButton.textContent = hasReachedLimit
-            ? `Máximo ${maxIntervalsPerDay} turnos por día`
-            : "+ Añadir otro turno";
+        addButton.disabled = false;
+        addButton.textContent = "+ Agregar horario";
         addButton.setAttribute(
             "aria-label",
-            hasReachedLimit
-                ? `Máximo ${maxIntervalsPerDay} turnos para este día`
-                : `Añadir otro turno para ${panel.dataset.dayLabel}`
+            `Agregar horario para ${panel.dataset.dayLabel}`
         );
     }
 }
@@ -567,7 +568,7 @@ function updatePanelText(panel) {
         if (removeButton) {
             removeButton.setAttribute(
                 "aria-label",
-                `Quitar turno ${index + 1} de ${dayLabel}`
+                `Quitar horario ${index + 1} de ${dayLabel}`
             );
         }
 
@@ -575,7 +576,6 @@ function updatePanelText(panel) {
     });
 
     const ranges = getValidPanelRanges(panel);
-    const hasTooManyIntervals = rows.length > maxIntervalsPerDay;
     const hasInvalidRows = rows.some(function (row) {
         return !validateRow(row);
     });
@@ -592,7 +592,10 @@ function updatePanelText(panel) {
 
         if (narrative) {
             narrative.textContent = hasInvalidRows
-                ? "Corrige el horario marcado para poder guardar."
+                ? (
+                    `Agrega al menos un horario para ${dayLabel} `
+                    + "o marca el día como cerrado."
+                )
                 : "";
         }
 
@@ -603,7 +606,7 @@ function updatePanelText(panel) {
         return `${range.start}-${range.end}`;
     });
 
-    if (hasInvalidRows || hasTooManyIntervals) {
+    if (hasInvalidRows) {
         summary.push("Revisar");
     }
 
@@ -635,10 +638,8 @@ function updatePanelText(panel) {
     narrative.textContent = (
         `Resumen: ${dayLabel} abierto `
         + parts.join(" y ")
-        + (hasTooManyIntervals
-            ? `. Deja máximo ${maxIntervalsPerDay} turnos.`
-            : hasInvalidRows
-            ? ". Corrige los turnos marcados."
+        + (hasInvalidRows
+            ? ". Corrige los horarios marcados."
             : ".")
     );
 }
@@ -677,11 +678,20 @@ function selectDay(weekday) {
                 "aria-selected",
                 isSelected ? "true" : "false"
             );
+            tab.setAttribute(
+                "aria-current",
+                isSelected ? "true" : "false"
+            );
         });
 }
 
 
-function createIntervalRow(weekday, dayLabel, start, end) {
+function createIntervalRow(
+    weekday,
+    dayLabel,
+    start = "",
+    end = "",
+) {
     intervalSequence += 1;
 
     const intervalId = `${weekday}-${intervalSequence}`;
@@ -711,7 +721,7 @@ function createIntervalRow(weekday, dayLabel, start, end) {
                     type="time"
                     name="start_time"
                     required
-                    aria-label="Hora de inicio de nuevo turno de ${dayLabel}"
+                    aria-label="Hora de apertura de nuevo horario de ${dayLabel}"
                 >
             </div>
 
@@ -735,7 +745,7 @@ function createIntervalRow(weekday, dayLabel, start, end) {
                     type="time"
                     name="end_time"
                     required
-                    aria-label="Hora de fin de nuevo turno de ${dayLabel}"
+                    aria-label="Hora de cierre de nuevo horario de ${dayLabel}"
                 >
             </div>
 
@@ -762,10 +772,21 @@ function createIntervalRow(weekday, dayLabel, start, end) {
         'input[name="end_time"]'
     );
 
-    startInput.value = start || "08:00";
-    endInput.value = end || "18:00";
+    startInput.value = start;
+    endInput.value = end;
 
     return row;
+}
+
+
+function focusLastTimeRow(panel) {
+    const newInput = panel.querySelector(
+        ".interval-row:last-child input[type='time']"
+    );
+
+    if (newInput) {
+        newInput.focus();
+    }
 }
 
 
@@ -815,19 +836,15 @@ function setDayState(panel, state) {
             ? ranges.map(function (range) {
                 return [range.start, range.end];
             })
-            : [["08:00", "18:00"]]
+            : [["", ""]]
     );
 
     markAsChanged();
+    focusLastTimeRow(panel);
 }
 
 
 function addInterval(panel) {
-    if (getPanelRows(panel).length >= maxIntervalsPerDay) {
-        updateEverything();
-        return;
-    }
-
     const weekday = panel.dataset.weekday;
     const dayLabel = panel.dataset.dayLabel;
     const list = panel.querySelector(
@@ -836,8 +853,8 @@ function addInterval(panel) {
     const ranges = getValidPanelRanges(panel);
     const lastRange = ranges[ranges.length - 1];
 
-    let start = "08:00";
-    let end = "18:00";
+    let start = "";
+    let end = "";
 
     if (lastRange && lastRange.endMinutes < (23 * 60)) {
         start = lastRange.end;
@@ -856,13 +873,7 @@ function addInterval(panel) {
     updateEverything();
     markAsChanged();
 
-    const newInput = list.querySelector(
-        ".interval-row:last-child input[type='time']"
-    );
-
-    if (newInput) {
-        newInput.focus();
-    }
+    focusLastTimeRow(panel);
 }
 
 
@@ -1061,7 +1072,6 @@ if (form) {
 
             if (
                 hasScheduleErrors()
-                || hasIntervalLimitErrors()
             ) {
                 event.preventDefault();
                 updateSaveState();
