@@ -1,13 +1,20 @@
 from datetime import datetime
 
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db import transaction
 from django.shortcuts import redirect, render
+from django.templatetags.static import static
+from django.urls import reverse
 
 from callcenters.selectors import get_callcenter_for_user
 
-from .models import ScheduleChangeLog, ScheduleInterval, Weekday
+from .models import (
+    ScheduleAudio,
+    ScheduleChangeLog,
+    ScheduleInterval,
+    Weekday,
+)
 
 
 WEEKDAYS = [
@@ -46,6 +53,110 @@ WEEKDAY_LABELS = {
     day["value"]: day["label"]
     for day in WEEKDAYS
 }
+
+VALID_WEEKDAYS = set(WEEKDAY_LABELS)
+SAVE_RATE_LIMIT = 10
+SAVE_RATE_WINDOW_SECONDS = 60
+
+SCHEDULE_AUDIO_OPTIONS = [
+    {
+        "key": ScheduleAudio.SCHEDULE_CHANGED,
+        "label": ScheduleAudio.SCHEDULE_CHANGED.label,
+        "title": "Audio 1",
+        "icon": "🔊",
+        "description": (
+            "Informa que el horario de atención cambió "
+            "temporalmente."
+        ),
+        "preview_url": static(
+            "audio/schedules/schedule_changed.mp3",
+        ),
+    },
+    {
+        "key": ScheduleAudio.TEMPORARILY_UNAVAILABLE,
+        "label": ScheduleAudio.TEMPORARILY_UNAVAILABLE.label,
+        "title": "Audio 2",
+        "icon": "🔇",
+        "description": (
+            "Indica que la atención no está disponible "
+            "en este momento."
+        ),
+        "preview_url": static(
+            "audio/schedules/temporarily_unavailable.mp3",
+        ),
+    },
+    {
+        "key": ScheduleAudio.SPECIAL_DAY,
+        "label": ScheduleAudio.SPECIAL_DAY.label,
+        "title": "Audio 3",
+        "icon": "📅",
+        "description": (
+            "Aviso para fechas especiales o eventos "
+            "operativos."
+        ),
+        "preview_url": static(
+            "audio/schedules/special_day.mp3",
+        ),
+    },
+]
+
+SCHEDULE_AUDIO_LABELS = {
+    option["key"]: option["label"]
+    for option in SCHEDULE_AUDIO_OPTIONS
+}
+
+
+def _get_selected_weekday(value):
+    if value in VALID_WEEKDAYS:
+        return value
+
+    return Weekday.MONDAY
+
+
+def _get_audio_key(value):
+    if value in SCHEDULE_AUDIO_LABELS:
+        return value
+
+    return ""
+
+
+def _schedule_save_rate_key(user, callcenter):
+    return (
+        "schedule-save-rate:"
+        f"{user.pk}:{callcenter.pk}"
+    )
+
+
+def _is_schedule_save_rate_limited(user, callcenter):
+    cache_key = _schedule_save_rate_key(
+        user,
+        callcenter,
+    )
+    attempts = cache.get(
+        cache_key,
+        0,
+    )
+
+    if attempts >= SAVE_RATE_LIMIT:
+        return True
+
+    if cache.add(
+        cache_key,
+        1,
+        SAVE_RATE_WINDOW_SECONDS,
+    ):
+        return False
+
+    try:
+        cache.incr(cache_key)
+    except ValueError:
+        cache.set(
+            cache_key,
+            1,
+            SAVE_RATE_WINDOW_SECONDS,
+        )
+
+    return False
 
 
 def _time_to_string(value):
@@ -127,18 +238,8 @@ def _get_schedule_rows(callcenter):
     ]
 
 
-def _get_latest_change(callcenter):
-    latest_change = (
-        ScheduleChangeLog.objects
-        .filter(callcenter=callcenter)
-        .select_related("user")
-        .first()
-    )
-
-    if not latest_change:
-        return None
-
-    user = latest_change.user
+def _format_change_log(change_log):
+    user = change_log.user
 
     return {
         "user": (
@@ -147,8 +248,36 @@ def _get_latest_change(callcenter):
             if user
             else "Usuario eliminado"
         ),
-        "reason": latest_change.reason,
-        "created_at": latest_change.created_at,
+        "reason": change_log.reason,
+        "audio_label": SCHEDULE_AUDIO_LABELS.get(
+            change_log.audio_key,
+            change_log.audio_key,
+        ),
+        "created_at": change_log.created_at,
+    }
+
+
+def _get_recent_changes(callcenter):
+    return [
+        _format_change_log(change_log)
+        for change_log in (
+            ScheduleChangeLog.objects
+            .filter(callcenter=callcenter)
+            .select_related("user")[:5]
+        )
+    ]
+
+
+def _get_change_context(callcenter):
+    recent_changes = _get_recent_changes(callcenter)
+
+    return {
+        "latest_change": (
+            recent_changes[0]
+            if recent_changes
+            else None
+        ),
+        "recent_changes": recent_changes,
     }
 
 
@@ -268,8 +397,8 @@ def _parse_schedule_post(post_data):
 
         if start_time >= end_time:
             errors.append(
-                f"En {day_label}, la hora de inicio "
-                "debe ser anterior a la hora final."
+                f"En {day_label}, la hora de cierre "
+                "debe ser posterior a la hora de inicio."
             )
             continue
 
@@ -298,10 +427,16 @@ def schedule_editor(request, codename):
     )
 
     if request.method == "POST":
+        selected_weekday = _get_selected_weekday(
+            request.POST.get("selected_weekday"),
+        )
         change_reason = request.POST.get(
             "change_reason",
             "",
         ).strip()
+        audio_key = _get_audio_key(
+            request.POST.get("audio_key"),
+        )
 
         (
             raw_rows,
@@ -310,6 +445,17 @@ def schedule_editor(request, codename):
         ) = _parse_schedule_post(
             request.POST,
         )
+
+        if _is_schedule_save_rate_limited(
+            request.user,
+            callcenter,
+        ):
+            errors.append(
+                (
+                    "Se hicieron demasiados intentos de guardado. "
+                    "Espera un momento e inténtalo de nuevo."
+                )
+            )
 
         if not change_reason:
             errors.append(
@@ -334,9 +480,11 @@ def schedule_editor(request, codename):
                     ),
                     "errors": errors,
                     "change_reason": change_reason,
-                    "latest_change": _get_latest_change(
-                        callcenter,
-                    ),
+                    "audio_options": SCHEDULE_AUDIO_OPTIONS,
+                    "selected_audio_key": audio_key,
+                    **_get_change_context(callcenter),
+                    "selected_weekday": selected_weekday,
+                    "save_feedback": "",
                 },
             )
 
@@ -357,20 +505,28 @@ def schedule_editor(request, codename):
                 ]
             )
 
+            change_log_data = {
+                "callcenter": callcenter,
+                "user": request.user,
+                "reason": change_reason,
+            }
+
+            if audio_key:
+                change_log_data["audio_key"] = audio_key
+
             ScheduleChangeLog.objects.create(
-                callcenter=callcenter,
-                user=request.user,
-                reason=change_reason,
+                **change_log_data,
             )
 
-        messages.success(
-            request,
-            "Horario guardado correctamente.",
+        editor_url = reverse(
+            "schedules:editor",
+            kwargs={
+                "codename": callcenter.codename,
+            },
         )
 
         return redirect(
-            "schedules:editor",
-            codename=callcenter.codename,
+            f"{editor_url}?day={selected_weekday}&saved=1",
         )
 
     rows = _get_schedule_rows(
@@ -378,6 +534,13 @@ def schedule_editor(request, codename):
     )
 
     weekly_sections = _build_weekly_sections(rows)
+    selected_weekday = _get_selected_weekday(
+        request.GET.get("day"),
+    )
+    save_feedback = ""
+
+    if request.GET.get("saved") == "1":
+        save_feedback = "Todos los cambios guardados"
 
     return render(
         request,
@@ -392,8 +555,10 @@ def schedule_editor(request, codename):
             ),
             "errors": [],
             "change_reason": "",
-            "latest_change": _get_latest_change(
-                callcenter,
-            ),
+            "audio_options": SCHEDULE_AUDIO_OPTIONS,
+            "selected_audio_key": "",
+            **_get_change_context(callcenter),
+            "selected_weekday": selected_weekday,
+            "save_feedback": save_feedback,
         },
     )

@@ -34,11 +34,13 @@ class ScheduleChangeLogAdmin(admin.ModelAdmin):
     list_display = (
         "callcenter",
         "user",
+        "audio_key",
         "created_at",
     )
 
     list_filter = (
         "callcenter",
+        "audio_key",
         "created_at",
     )
 
@@ -53,6 +55,7 @@ class ScheduleChangeLogAdmin(admin.ModelAdmin):
         "callcenter",
         "user",
         "reason",
+        "audio_key",
         "created_at",
     )
 

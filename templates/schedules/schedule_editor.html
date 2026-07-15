@@ -29,16 +29,27 @@ Horario | {{ callcenter.name }}
         Un día sin horarios se considera cerrado.
     </p>
 
-    {% if latest_change %}
-        <p class="last-change">
-            Último cambio:
-            <strong>
-                {{ latest_change.user }}
-            </strong>
-            · {{ latest_change.created_at|date:"d/m/Y H:i" }}
-            · {{ latest_change.reason }}
-        </p>
-    {% endif %}
+    <div class="schedule-header-meta">
+        {% if latest_change %}
+            <p class="last-change">
+                Último cambio:
+                <strong>
+                    {{ latest_change.user }}
+                </strong>
+                · {{ latest_change.created_at|date:"d/m/Y H:i" }}
+            </p>
+        {% endif %}
+
+        <button
+            type="button"
+            class="history-open-button"
+            data-history-open
+            aria-controls="history-drawer"
+            aria-expanded="false"
+        >
+            Historial
+        </button>
+    </div>
 </header>
 
 
@@ -87,9 +98,17 @@ Horario | {{ callcenter.name }}
     method="post"
     class="weekly-schedule"
     data-schedule-form
+    data-initial-weekday="{{ selected_weekday }}"
     aria-describedby="schedule-description"
 >
     {% csrf_token %}
+
+    <input
+        type="hidden"
+        name="selected_weekday"
+        value="{{ selected_weekday }}"
+        data-selected-weekday
+    >
 
     <section
         class="week-overview"
@@ -199,13 +218,22 @@ Horario | {{ callcenter.name }}
                 class="closed-editor-state"
                 data-closed-editor-state
             >
-                <strong>
-                    Este día está cerrado.
-                </strong>
-
-                <span>
-                    No se recibirán llamadas en este call center.
+                <span
+                    class="closed-state-icon"
+                    aria-hidden="true"
+                >
+                    -
                 </span>
+
+                <div>
+                    <strong>
+                        Día cerrado
+                    </strong>
+
+                    <span>
+                        No se recibirán llamadas en este call center.
+                    </span>
+                </div>
             </div>
 
             <div
@@ -311,31 +339,143 @@ Horario | {{ callcenter.name }}
     </section>
 
 
-    <section
-        class="change-reason"
+    <div
+        class="schedule-dialog-backdrop save-change-backdrop"
         data-change-reason-section
-        aria-labelledby="change-reason-label"
+        data-save-change-dialog
         {% if not errors and not change_reason %}hidden{% endif %}
     >
-        <label
-            id="change-reason-label"
-            for="change-reason"
+        <section
+            class="change-reason save-change-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="change-reason-title"
+            aria-describedby="change-reason-description"
         >
-            Motivo del cambio
-        </label>
+            <h2 id="change-reason-title">
+                Guardar cambios
+            </h2>
 
-        <textarea
-            id="change-reason"
-            name="change_reason"
-            rows="2"
-            data-change-reason
-            placeholder="Ej: ajuste temporal por capacitación, festivo o cambio operativo."
-        >{{ change_reason }}</textarea>
+            <p
+                id="change-reason-description"
+                class="save-change-intro"
+            >
+                Registra el motivo del cambio antes de actualizar el horario.
+            </p>
 
-        <p>
-            Este motivo quedará registrado en el historial.
-        </p>
-    </section>
+            <div class="change-reason-field">
+                <label
+                    class="change-reason-label"
+                    for="change-reason"
+                >
+                    Motivo del cambio
+                </label>
+
+                <textarea
+                    id="change-reason"
+                    name="change_reason"
+                    rows="3"
+                    data-change-reason
+                    aria-describedby="change-reason-help change-reason-error"
+                    aria-invalid="false"
+                    placeholder="Ej: Capacitación del personal, festivo nacional, falla técnica..."
+                >{{ change_reason }}</textarea>
+
+                <p id="change-reason-help">
+                    Este motivo quedará registrado en el historial del sistema.
+                </p>
+
+                <p
+                    id="change-reason-error"
+                    class="change-reason-error"
+                    data-change-reason-error
+                    role="alert"
+                >
+                </p>
+            </div>
+
+            <fieldset
+                class="audio-choice-group"
+                data-audio-section
+            >
+                <legend>
+                    Audios de referencia
+                </legend>
+
+                <p class="audio-choice-note">
+                    Por ahora, cuando el call center esté cerrado, Asterisk reproducirá el audio configurado en el dialplan.
+                </p>
+
+                <div class="audio-choice-list">
+                    {% for option in audio_options %}
+                        <div class="audio-choice-card">
+                            <input
+                                id="audio-{{ option.key }}"
+                                type="radio"
+                                name="audio_key"
+                                value="{{ option.key }}"
+                                {% if selected_audio_key == option.key %}checked{% endif %}
+                            >
+
+                            <label
+                                class="audio-choice-content"
+                                for="audio-{{ option.key }}"
+                            >
+                                <span
+                                    class="audio-choice-check"
+                                    aria-hidden="true"
+                                >
+                                    ✓
+                                </span>
+
+                                <span
+                                    class="audio-choice-icon"
+                                    aria-hidden="true"
+                                >
+                                    {{ option.icon }}
+                                </span>
+
+                                <strong>
+                                    {{ option.title }}
+                                </strong>
+
+                                <span>
+                                    {{ option.description }}
+                                </span>
+                            </label>
+
+                            <button
+                                type="button"
+                                class="audio-preview-button"
+                                data-audio-preview
+                                data-audio-src="{{ option.preview_url }}"
+                            >
+                                Escuchar ejemplo
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <div class="save-change-dialog-actions">
+                <button
+                    type="button"
+                    class="dialog-secondary-button"
+                    data-save-change-cancel
+                >
+                    Volver
+                </button>
+
+                <button
+                    type="submit"
+                    class="save-button save-change-submit"
+                    data-save-change-confirm
+                >
+                    Guardar cambios
+                </button>
+            </div>
+        </section>
+    </div>
 
 
     <div class="form-actions">
@@ -345,7 +485,11 @@ Horario | {{ callcenter.name }}
             role="status"
             aria-live="polite"
         >
-            Todos los cambios guardados
+            {% if save_feedback %}
+                {{ save_feedback }}
+            {% else %}
+                Todos los cambios guardados
+            {% endif %}
         </span>
 
         <a
@@ -366,6 +510,92 @@ Horario | {{ callcenter.name }}
         </button>
     </div>
 </form>
+
+
+<div
+    class="schedule-dialog-backdrop history-drawer-backdrop"
+    data-history-drawer
+    hidden
+>
+    <aside
+        id="history-drawer"
+        class="history-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="history-drawer-title"
+    >
+        <header class="history-drawer-header">
+            <div>
+                <p class="panel-eyebrow">
+                    Auditoría
+                </p>
+
+                <h2 id="history-drawer-title">
+                    Historial reciente
+                </h2>
+            </div>
+
+            <button
+                type="button"
+                class="history-close-button"
+                data-history-close
+                aria-label="Cerrar historial"
+            >
+                x
+            </button>
+        </header>
+
+        {% if latest_change %}
+            <p class="history-drawer-latest">
+                Último cambio:
+                <strong>
+                    {{ latest_change.user }}
+                </strong>
+                · {{ latest_change.created_at|date:"d/m/Y H:i" }}
+            </p>
+        {% endif %}
+
+        {% if recent_changes %}
+            <ol class="change-history-list">
+                {% for change in recent_changes %}
+                    <li>
+                        <span
+                            class="change-history-icon"
+                            aria-hidden="true"
+                        >
+                            👤
+                        </span>
+
+                        <div class="change-history-body">
+                            <p class="change-history-line">
+                                <strong>
+                                    {{ change.user }}
+                                </strong>
+
+                                <span>
+                                    modificó el horario el
+                                </span>
+
+                                <time>
+                                    {{ change.created_at|date:"d/m/Y H:i" }}
+                                </time>
+                            </p>
+
+                            <p class="change-history-reason">
+                                {{ change.reason }}
+                            </p>
+
+                        </div>
+                    </li>
+                {% endfor %}
+            </ol>
+        {% else %}
+            <p class="change-history-empty">
+                Aún no hay cambios registrados.
+            </p>
+        {% endif %}
+    </aside>
+</div>
 
 
 <div

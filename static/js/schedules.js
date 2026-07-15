@@ -4,14 +4,44 @@ let isSubmitting = false;
 
 
 const form = document.querySelector("[data-schedule-form]");
+const selectedWeekdayInput = document.querySelector(
+    "[data-selected-weekday]"
+);
 const unsavedIndicator = document.querySelector(
     "[data-unsaved-indicator]"
 );
 const saveButton = document.querySelector("[data-save-button]");
 const weekTotal = document.querySelector("[data-week-total]");
 const reasonInput = document.querySelector("[data-change-reason]");
+const reasonError = document.querySelector(
+    "[data-change-reason-error]"
+);
 const reasonSection = document.querySelector(
     "[data-change-reason-section]"
+);
+const saveChangeDialog = document.querySelector(
+    "[data-save-change-dialog]"
+);
+const saveChangeCancel = document.querySelector(
+    "[data-save-change-cancel]"
+);
+const saveChangeConfirm = document.querySelector(
+    "[data-save-change-confirm]"
+);
+const historyDrawer = document.querySelector(
+    "[data-history-drawer]"
+);
+const historyOpenButton = document.querySelector(
+    "[data-history-open]"
+);
+const historyCloseButton = document.querySelector(
+    "[data-history-close]"
+);
+const audioInputs = Array.from(
+    document.querySelectorAll('input[name="audio_key"]')
+);
+const audioPreviewButtons = Array.from(
+    document.querySelectorAll("[data-audio-preview]")
 );
 const unsavedDialog = document.querySelector(
     "[data-unsaved-dialog]"
@@ -40,6 +70,8 @@ const closeDayDescription = document.querySelector(
 let pendingUnsavedAction = null;
 let pendingClosePanel = null;
 let dialogReturnFocus = null;
+let activeAudio = null;
+let activeAudioButton = null;
 
 
 function timeToMinutes(value) {
@@ -111,6 +143,7 @@ function getRowTimes(row) {
     );
 
     return {
+        row,
         startInput,
         endInput,
         start: startInput ? startInput.value : "",
@@ -322,6 +355,70 @@ function confirmCloseDayDialog() {
 }
 
 
+function showSaveChangeDialog() {
+    if (!saveChangeDialog) {
+        return;
+    }
+
+    dialogReturnFocus = document.activeElement;
+    saveChangeDialog.hidden = false;
+    updateSaveState();
+
+    if (reasonInput) {
+        reasonInput.focus();
+    }
+}
+
+
+function closeSaveChangeDialog() {
+    if (!saveChangeDialog) {
+        return;
+    }
+
+    stopActiveAudio();
+    saveChangeDialog.hidden = true;
+    updateSaveState();
+    restoreDialogFocus();
+}
+
+
+function showHistoryDrawer() {
+    if (!historyDrawer) {
+        return;
+    }
+
+    dialogReturnFocus = document.activeElement;
+    historyDrawer.hidden = false;
+
+    if (historyOpenButton) {
+        historyOpenButton.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+    }
+
+    if (historyCloseButton) {
+        historyCloseButton.focus();
+    }
+}
+
+
+function closeHistoryDrawer() {
+    if (!historyDrawer) {
+        return;
+    }
+
+    historyDrawer.hidden = true;
+    if (historyOpenButton) {
+        historyOpenButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
+    restoreDialogFocus();
+}
+
+
 function shouldConfirmNavigation(event, link) {
     const href = link.getAttribute("href");
 
@@ -352,6 +449,29 @@ function setTabSummary(tabSummary, lines) {
         item.textContent = line;
         tabSummary.appendChild(item);
     });
+}
+
+
+function getSelectedAudioInput() {
+    return audioInputs.find(function (input) {
+        return input.checked;
+    });
+}
+
+
+function getFirstAudioInput() {
+    return audioInputs[0] || null;
+}
+
+
+function updateAudioValidity() {
+    const firstAudioInput = getFirstAudioInput();
+
+    if (!firstAudioInput) {
+        return;
+    }
+
+    firstAudioInput.setCustomValidity("");
 }
 
 
@@ -399,7 +519,7 @@ function validateRow(row) {
 
     const message = (
         "La hora de cierre debe ser posterior "
-        + "a la apertura."
+        + "a la hora de inicio."
     );
 
     times.startInput.setCustomValidity("");
@@ -408,6 +528,53 @@ function validateRow(row) {
     error.textContent = message;
 
     return false;
+}
+
+
+function validatePanelOverlaps(panel) {
+    const ranges = getPanelRanges(panel).filter(function (range) {
+        return (
+            range.startMinutes !== null
+            && range.endMinutes !== null
+            && range.startMinutes < range.endMinutes
+        );
+    });
+
+    let hasOverlap = false;
+    let activeRange = ranges[0] || null;
+
+    ranges.slice(1).forEach(function (range) {
+        if (!activeRange) {
+            activeRange = range;
+            return;
+        }
+
+        if (range.startMinutes < activeRange.endMinutes) {
+            const message = (
+                `El horario ${range.start}-${range.end} `
+                + `se cruza con ${activeRange.start}-${activeRange.end}.`
+            );
+            const error = range.row.querySelector("[data-row-error]");
+
+            range.row.classList.add("has-error");
+
+            if (error) {
+                error.textContent = message;
+            }
+
+            if (range.endInput) {
+                range.endInput.setCustomValidity(message);
+            }
+
+            hasOverlap = true;
+        }
+
+        if (range.endMinutes > activeRange.endMinutes) {
+            activeRange = range;
+        }
+    });
+
+    return !hasOverlap;
 }
 
 
@@ -422,7 +589,34 @@ function hasScheduleErrors() {
             }
         });
 
+    document
+        .querySelectorAll("[data-day-card]")
+        .forEach(function (panel) {
+            if (!validatePanelOverlaps(panel)) {
+                hasErrors = true;
+            }
+        });
+
     return hasErrors;
+}
+
+
+function focusFirstScheduleError() {
+    const firstErrorRow = document.querySelector(
+        "[data-interval-row].has-error"
+    );
+
+    if (!firstErrorRow) {
+        return;
+    }
+
+    const firstInvalidInput = firstErrorRow.querySelector(
+        "input:invalid"
+    ) || firstErrorRow.querySelector("input[type='time']");
+
+    if (firstInvalidInput) {
+        firstInvalidInput.focus();
+    }
 }
 
 
@@ -440,11 +634,30 @@ function updateSaveState() {
         reasonSection
         && !reasonSection.hidden
     );
+    updateAudioValidity();
 
     if (reasonInput) {
+        const shouldShowReasonError = (
+            hasUnsavedChanges
+            && reasonIsVisible
+            && reasonMissing
+        );
+
         reasonInput.setCustomValidity(
+            shouldShowReasonError
+                ? "El motivo es obligatorio."
+                : ""
+        );
+        reasonInput.setAttribute(
+            "aria-invalid",
+            shouldShowReasonError ? "true" : "false"
+        );
+    }
+
+    if (reasonError) {
+        reasonError.textContent = (
             hasUnsavedChanges && reasonIsVisible && reasonMissing
-                ? "Escribe el motivo del cambio."
+                ? "El motivo es obligatorio."
                 : ""
         );
     }
@@ -468,8 +681,15 @@ function updateSaveState() {
     saveButton.disabled = (
         !hasUnsavedChanges
         || hasErrors
-        || (reasonIsVisible && reasonMissing)
     );
+
+    if (saveChangeConfirm) {
+        saveChangeConfirm.disabled = (
+            !hasUnsavedChanges
+            || hasErrors
+            || reasonMissing
+        );
+    }
 }
 
 
@@ -483,6 +703,21 @@ function markAsChanged() {
     }
 
     updateSaveState();
+}
+
+
+function setSubmittingState() {
+    [
+        saveButton,
+        saveChangeConfirm,
+    ].forEach(function (button) {
+        if (!button) {
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = "Guardando...";
+    });
 }
 
 
@@ -576,9 +811,13 @@ function updatePanelText(panel) {
     });
 
     const ranges = getValidPanelRanges(panel);
-    const hasInvalidRows = rows.some(function (row) {
-        return !validateRow(row);
-    });
+    const hasOverlapErrors = !validatePanelOverlaps(panel);
+    const hasInvalidRows = (
+        hasOverlapErrors
+        || rows.some(function (row) {
+            return row.classList.contains("has-error");
+        })
+    );
 
     if (ranges.length === 0) {
         setTabSummary(
@@ -659,6 +898,10 @@ function updateEverything() {
 
 
 function selectDay(weekday) {
+    if (selectedWeekdayInput) {
+        selectedWeekdayInput.value = weekday;
+    }
+
     document
         .querySelectorAll("[data-day-card]")
         .forEach(function (panel) {
@@ -943,6 +1186,31 @@ document.addEventListener(
             return;
         }
 
+        const audioChoiceCard = event.target.closest(
+            ".audio-choice-card"
+        );
+
+        if (
+            audioChoiceCard
+            && !event.target.closest("[data-audio-preview]")
+        ) {
+            const input = audioChoiceCard.querySelector(
+                'input[name="audio_key"]'
+            );
+
+            if (input && !input.checked) {
+                input.checked = true;
+                input.dispatchEvent(
+                    new Event(
+                        "change",
+                        {
+                            bubbles: true,
+                        }
+                    )
+                );
+            }
+        }
+
     }
 );
 
@@ -1002,6 +1270,30 @@ if (closeDayDialogConfirm) {
 }
 
 
+if (saveChangeCancel) {
+    saveChangeCancel.addEventListener(
+        "click",
+        closeSaveChangeDialog
+    );
+}
+
+
+if (historyOpenButton) {
+    historyOpenButton.addEventListener(
+        "click",
+        showHistoryDrawer
+    );
+}
+
+
+if (historyCloseButton) {
+    historyCloseButton.addEventListener(
+        "click",
+        closeHistoryDrawer
+    );
+}
+
+
 if (unsavedDialog) {
     unsavedDialog.addEventListener(
         "click",
@@ -1026,6 +1318,30 @@ if (closeDayDialog) {
 }
 
 
+if (saveChangeDialog) {
+    saveChangeDialog.addEventListener(
+        "click",
+        function (event) {
+            if (event.target === saveChangeDialog) {
+                closeSaveChangeDialog();
+            }
+        }
+    );
+}
+
+
+if (historyDrawer) {
+    historyDrawer.addEventListener(
+        "click",
+        function (event) {
+            if (event.target === historyDrawer) {
+                closeHistoryDrawer();
+            }
+        }
+    );
+}
+
+
 document.addEventListener(
     "keydown",
     function (event) {
@@ -1034,6 +1350,16 @@ document.addEventListener(
         if (
             event.key === "Escape"
         ) {
+            if (historyDrawer && !historyDrawer.hidden) {
+                closeHistoryDrawer();
+                return;
+            }
+
+            if (saveChangeDialog && !saveChangeDialog.hidden) {
+                closeSaveChangeDialog();
+                return;
+            }
+
             if (closeDayDialog && !closeDayDialog.hidden) {
                 closeCloseDayDialog();
                 return;
@@ -1047,13 +1373,64 @@ document.addEventListener(
 );
 
 
+function stopActiveAudio() {
+    if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+    }
+
+    if (activeAudioButton) {
+        activeAudioButton.textContent = "Escuchar ejemplo";
+    }
+
+    activeAudio = null;
+    activeAudioButton = null;
+}
+
+
+audioPreviewButtons.forEach(function (button) {
+    button.addEventListener(
+        "click",
+        function () {
+            const audioSource = button.dataset.audioSrc;
+
+            if (!audioSource) {
+                return;
+            }
+
+            if (activeAudioButton === button && activeAudio) {
+                stopActiveAudio();
+                return;
+            }
+
+            stopActiveAudio();
+
+            activeAudio = new Audio(audioSource);
+            activeAudioButton = button;
+            button.textContent = "Pausar";
+
+            activeAudio.addEventListener(
+                "ended",
+                stopActiveAudio
+            );
+
+            activeAudio.play().catch(function () {
+                button.textContent = "No disponible";
+                activeAudio = null;
+                activeAudioButton = null;
+            });
+        }
+    );
+});
+
+
 if (form) {
     form.addEventListener(
         "input",
         function (event) {
             if (
                 event.target.matches(
-                    'input[name="start_time"], input[name="end_time"], textarea[name="change_reason"]'
+                    'input[name="start_time"], input[name="end_time"], textarea[name="change_reason"], input[name="audio_key"]'
                 )
             ) {
                 updateEverything();
@@ -1063,39 +1440,58 @@ if (form) {
     );
 
     form.addEventListener(
+        "change",
+        function (event) {
+            if (event.target.matches('input[name="audio_key"]')) {
+                updateEverything();
+                markAsChanged();
+            }
+        }
+    );
+
+    form.addEventListener(
         "submit",
         function (event) {
+            const saveDialogIsOpen = (
+                !saveChangeDialog
+                || !saveChangeDialog.hidden
+            );
             const reasonMissing = (
                 reasonInput
                 && !reasonInput.value.trim()
             );
-
             if (
                 hasScheduleErrors()
             ) {
                 event.preventDefault();
                 updateSaveState();
+                focusFirstScheduleError();
+                return;
+            }
+
+            if (saveChangeDialog && !saveDialogIsOpen) {
+                event.preventDefault();
+                showSaveChangeDialog();
                 return;
             }
 
             if (reasonMissing) {
                 event.preventDefault();
-
-                if (reasonSection) {
-                    reasonSection.hidden = false;
-                }
-
                 updateSaveState();
 
                 if (reasonInput) {
-                    reasonInput.reportValidity();
-                    reasonInput.focus();
+                    if (reasonMissing) {
+                        reasonInput.reportValidity();
+                        reasonInput.focus();
+                        return;
+                    }
                 }
 
                 return;
             }
 
             isSubmitting = true;
+            setSubmittingState();
         }
     );
 }
@@ -1122,12 +1518,21 @@ const firstOpenPanel = document.querySelector(
 );
 const firstPanel = document.querySelector("[data-day-card]");
 const errorSummary = document.querySelector("#schedule-errors");
+const initialWeekday = (
+    form
+    && form.dataset.initialWeekday
+);
+const initialPanel = initialWeekday
+    ? document.querySelector(
+        `[data-day-card][data-weekday="${initialWeekday}"]`
+    )
+    : null;
 
 updateEverything();
 
-if (firstOpenPanel || firstPanel) {
+if (initialPanel || firstOpenPanel || firstPanel) {
     selectDay(
-        (firstOpenPanel || firstPanel).dataset.weekday
+        (initialPanel || firstOpenPanel || firstPanel).dataset.weekday
     );
 }
 

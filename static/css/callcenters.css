@@ -1,15 +1,17 @@
 .callcenter-list {
+    max-width: 980px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
 }
 
 .callcenter-card {
     width: 100%;
-    padding: 22px 24px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    padding: 18px 20px;
+    border: 0;
+    border-radius: 10px;
     background: var(--surface);
+    box-shadow: var(--card-shadow);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -52,13 +54,13 @@
 }
 
 .status-active {
-    background: #e8f7ee;
-    color: #227443;
+    background: var(--success-bg);
+    color: var(--success-text);
 }
 
 .status-inactive {
-    background: #f1f2f4;
-    color: #686d76;
+    background: var(--neutral-bg);
+    color: #475569;
 }
 
 .callcenter-actions {
@@ -82,9 +84,10 @@
 
 .empty-state {
     padding: 48px 28px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border: 0;
+    border-radius: 10px;
     background: var(--surface);
+    box-shadow: var(--card-shadow);
     text-align: center;
 }
 

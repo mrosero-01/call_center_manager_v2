@@ -1,15 +1,22 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
 from callcenters.models import CallCenter
 from clients.models import Client
 
-from .models import ScheduleChangeLog, ScheduleInterval, Weekday
+from .models import (
+    ScheduleAudio,
+    ScheduleChangeLog,
+    ScheduleInterval,
+    Weekday,
+)
 
 
 class ScheduleEditorTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client_account = Client.objects.create(
             name="Cliente de prueba",
         )
@@ -31,7 +38,14 @@ class ScheduleEditorTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def post_schedule(self, weekdays, starts, ends, reason):
+    def post_schedule(
+        self,
+        weekdays,
+        starts,
+        ends,
+        reason,
+        audio_key=ScheduleAudio.SCHEDULE_CHANGED,
+    ):
         return self.client.post(
             self.url,
             {
@@ -39,6 +53,7 @@ class ScheduleEditorTests(TestCase):
                 "start_time": starts,
                 "end_time": ends,
                 "change_reason": reason,
+                "audio_key": audio_key,
             },
         )
 
@@ -62,6 +77,25 @@ class ScheduleEditorTests(TestCase):
         self.assertEqual(
             ScheduleChangeLog.objects.count(),
             0,
+        )
+
+    def test_audio_reference_is_optional(self):
+        response = self.post_schedule(
+            [Weekday.MONDAY],
+            ["08:00"],
+            ["12:00"],
+            "Ajuste operativo",
+            audio_key="",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            ScheduleInterval.objects.count(),
+            1,
+        )
+        self.assertEqual(
+            ScheduleChangeLog.objects.count(),
+            1,
         )
 
     def test_allows_more_than_two_intervals_per_day(self):
@@ -107,11 +141,95 @@ class ScheduleEditorTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "debe ser anterior a la hora final",
+            "debe ser posterior a la hora de inicio",
         )
         self.assertEqual(
             ScheduleInterval.objects.count(),
             0,
+        )
+
+    def test_rejects_nested_overlapping_intervals(self):
+        response = self.post_schedule(
+            [
+                Weekday.WEDNESDAY,
+                Weekday.WEDNESDAY,
+            ],
+            [
+                "08:00",
+                "09:00",
+            ],
+            [
+                "18:00",
+                "10:00",
+            ],
+            "Ajuste operativo",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "se cruza con",
+        )
+        self.assertEqual(
+            ScheduleInterval.objects.count(),
+            0,
+        )
+
+    def test_user_cannot_edit_callcenter_from_other_client(self):
+        other_client = Client.objects.create(
+            name="Otro cliente",
+        )
+        other_callcenter = CallCenter.objects.create(
+            client=other_client,
+            name="Campaña ajena",
+            codename="campana_ajena",
+        )
+        url = reverse(
+            "schedules:editor",
+            kwargs={
+                "codename": other_callcenter.codename,
+            },
+        )
+
+        response = self.client.get(url)
+
+        self.assertEqual(
+            response.status_code,
+            404,
+        )
+
+    def test_schedule_save_rate_limit(self):
+        for index in range(10):
+            response = self.post_schedule(
+                [Weekday.MONDAY],
+                ["08:00"],
+                ["12:00"],
+                f"Ajuste operativo {index}",
+            )
+
+            self.assertEqual(
+                response.status_code,
+                302,
+            )
+
+        response = self.post_schedule(
+            [Weekday.MONDAY],
+            ["08:00"],
+            ["12:00"],
+            "Ajuste operativo bloqueado",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+        self.assertContains(
+            response,
+            "demasiados intentos de guardado",
+        )
+        self.assertEqual(
+            ScheduleChangeLog.objects.count(),
+            10,
         )
 
     def test_rejects_overlapping_intervals(self):
@@ -156,6 +274,7 @@ class ScheduleEditorTests(TestCase):
                 "18:00",
             ],
             "Cambio por capacitación",
+            audio_key=ScheduleAudio.SPECIAL_DAY,
         )
 
         self.assertEqual(response.status_code, 302)
@@ -177,4 +296,8 @@ class ScheduleEditorTests(TestCase):
         self.assertEqual(
             change_log.reason,
             "Cambio por capacitación",
+        )
+        self.assertEqual(
+            change_log.audio_key,
+            ScheduleAudio.SPECIAL_DAY,
         )

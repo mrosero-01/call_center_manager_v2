@@ -13,6 +13,21 @@ class Weekday(models.TextChoices):
     SUNDAY = "Sun", "Domingo"
 
 
+class ScheduleAudio(models.TextChoices):
+    SCHEDULE_CHANGED = (
+        "schedule_changed",
+        "Horario modificado",
+    )
+    TEMPORARILY_UNAVAILABLE = (
+        "temporarily_unavailable",
+        "Atención no disponible",
+    )
+    SPECIAL_DAY = (
+        "special_day",
+        "Festivo o evento especial",
+    )
+
+
 class ScheduleInterval(models.Model):
     callcenter = models.ForeignKey(
         "callcenters.CallCenter",
@@ -74,6 +89,12 @@ class ScheduleChangeLog(models.Model):
     )
 
     reason = models.TextField()
+
+    audio_key = models.CharField(
+        max_length=40,
+        choices=ScheduleAudio.choices,
+        default=ScheduleAudio.SCHEDULE_CHANGED,
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

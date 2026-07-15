@@ -8,6 +8,13 @@
     --border: #e4e6ea;
     --accent: #3157d5;
     --accent-hover: #2848b3;
+    --success-bg: #d7f5e3;
+    --success-bg-strong: #ccf0dc;
+    --success-text: #166534;
+    --neutral-bg: #f1f5f9;
+    --danger-bg: #fff1f2;
+    --danger-text: #b42318;
+    --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
     --sidebar-width: 260px;
     --radius: 12px;
 }
