@@ -8,7 +8,7 @@ from .models import User
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         (
-            "Call Center Manager",
+            "Siptic Manager",
             {
                 "fields": (
                     "client",
@@ -19,7 +19,7 @@ class CustomUserAdmin(UserAdmin):
 
     add_fieldsets = UserAdmin.add_fieldsets + (
         (
-            "Call Center Manager",
+            "Siptic Manager",
             {
                 "fields": (
                     "client",

@@ -90,10 +90,32 @@ class ScheduleChangeLog(models.Model):
 
     reason = models.TextField()
 
-    audio_key = models.CharField(
-        max_length=40,
+    before_snapshot = models.JSONField(
+        default=dict,
+    )
+
+    after_snapshot = models.JSONField(
+        default=dict,
+    )
+
+    audio_file = models.CharField(
+        max_length=60,
         choices=ScheduleAudio.choices,
-        default=ScheduleAudio.SCHEDULE_CHANGED,
+        blank=True,
+    )
+
+    audio_label = models.CharField(
+        max_length=120,
+        blank=True,
+    )
+
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+    )
+
+    user_agent = models.TextField(
+        blank=True,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -102,6 +124,25 @@ class ScheduleChangeLog(models.Model):
         ordering = (
             "-created_at",
         )
+        indexes = [
+            models.Index(
+                fields=[
+                    "-created_at",
+                ],
+            ),
+            models.Index(
+                fields=[
+                    "callcenter",
+                    "-created_at",
+                ],
+            ),
+            models.Index(
+                fields=[
+                    "user",
+                    "-created_at",
+                ],
+            ),
+        ]
 
     def __str__(self):
         return (

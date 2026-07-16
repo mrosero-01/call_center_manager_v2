@@ -1,0 +1,241 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+
+{% block title %}
+Auditoría | Siptic Manager
+{% endblock %}
+
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/audit.css' %}"
+>
+{% endblock %}
+
+
+{% block content %}
+<section class="audit-page">
+    <header class="page-header audit-header">
+        <p class="page-eyebrow">
+            Supervisión
+        </p>
+
+        <h1>
+            Auditoría de horarios
+        </h1>
+
+        <p class="page-description">
+            Registro de cambios aplicados a los horarios de call centers.
+        </p>
+    </header>
+
+
+    <form
+        class="audit-filters"
+        method="get"
+    >
+        <label>
+            <span>
+                Buscar motivo
+            </span>
+            <input
+                type="search"
+                name="q"
+                value="{{ filters.q }}"
+                placeholder="Ej: capacitación"
+            >
+        </label>
+
+        <label>
+            <span>
+                Call center
+            </span>
+            <select name="callcenter">
+                <option value="">
+                    Todos
+                </option>
+                {% for callcenter in callcenters %}
+                    <option
+                        value="{{ callcenter.id }}"
+                        {% if filters.callcenter == callcenter.id|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ callcenter.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            <span>
+                Usuario
+            </span>
+            <select name="user">
+                <option value="">
+                    Todos
+                </option>
+                {% for user in users %}
+                    <option
+                        value="{{ user.id }}"
+                        {% if filters.user == user.id|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ user.get_full_name|default:user.username }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            <span>
+                Desde
+            </span>
+            <input
+                type="date"
+                name="date_from"
+                value="{{ filters.date_from }}"
+            >
+        </label>
+
+        <label>
+            <span>
+                Hasta
+            </span>
+            <input
+                type="date"
+                name="date_to"
+                value="{{ filters.date_to }}"
+            >
+        </label>
+
+        <div class="filter-actions">
+            <button type="submit">
+                Filtrar
+            </button>
+
+            <a href="{% url 'audit:list' %}">
+                Limpiar
+            </a>
+        </div>
+    </form>
+
+
+    <section class="audit-card">
+        <div class="audit-card-header">
+            <div>
+                <h2>
+                    Cambios registrados
+                </h2>
+
+                <p>
+                    {{ total_count }} registros encontrados
+                </p>
+            </div>
+        </div>
+
+        <div class="audit-table-wrap">
+            <table class="audit-table">
+                <thead>
+                    <tr>
+                        <th>
+                            Fecha
+                        </th>
+                        <th>
+                            Usuario
+                        </th>
+                        <th>
+                            Call center
+                        </th>
+                        <th>
+                            Motivo
+                        </th>
+                        <th>
+                            Audio
+                        </th>
+                        <th>
+                            Acción
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for log in logs %}
+                        <tr>
+                            <td>
+                                <time datetime="{{ log.created_at|date:'c' }}">
+                                    {{ log.created_at|date:"d/m/Y H:i" }}
+                                </time>
+                            </td>
+
+                            <td>
+                                {% if log.user %}
+                                    {{ log.user.get_full_name|default:log.user.username }}
+                                {% else %}
+                                    Usuario eliminado
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <strong>
+                                    {{ log.callcenter.name }}
+                                </strong>
+                                <span>
+                                    {{ log.callcenter.codename }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ log.reason|truncatechars:80 }}
+                            </td>
+
+                            <td>
+                                {{ log.audio_label|default:log.audio_file|default:"Sin audio" }}
+                            </td>
+
+                            <td>
+                                <a
+                                    class="audit-detail-link"
+                                    href="{% url 'audit:detail' log.id %}"
+                                >
+                                    Ver detalle
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6">
+                                <div class="audit-empty">
+                                    No hay registros con esos filtros.
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if logs.has_other_pages %}
+            <nav
+                class="audit-pagination"
+                aria-label="Paginación"
+            >
+                {% if logs.has_previous %}
+                    <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ logs.previous_page_number }}">
+                        Anterior
+                    </a>
+                {% endif %}
+
+                <span>
+                    Página {{ logs.number }} de {{ logs.paginator.num_pages }}
+                </span>
+
+                {% if logs.has_next %}
+                    <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ logs.next_page_number }}">
+                        Siguiente
+                    </a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

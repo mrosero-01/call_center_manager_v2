@@ -3,6 +3,11 @@ from django.test import TestCase
 from django.urls import reverse
 
 from clients.models import Client
+from schedules.models import (
+    ScheduleChangeLog,
+    ScheduleInterval,
+    Weekday,
+)
 
 from .models import CallCenter
 
@@ -25,6 +30,18 @@ class CallCenterListTests(TestCase):
             name="Campaña B",
             codename="campana_b",
         )
+        ScheduleInterval.objects.create(
+            callcenter=self.callcenter_a,
+            weekday=Weekday.MONDAY,
+            start_time="08:00",
+            end_time="12:00",
+        )
+        ScheduleChangeLog.objects.create(
+            callcenter=self.callcenter_a,
+            reason="Ajuste operativo",
+            before_snapshot={},
+            after_snapshot={},
+        )
         self.url = reverse("callcenters:list")
 
     def test_normal_user_only_sees_own_client_callcenters(self):
@@ -44,6 +61,14 @@ class CallCenterListTests(TestCase):
         self.assertNotContains(
             response,
             self.callcenter_b.name,
+        )
+        self.assertContains(
+            response,
+            "Con horario",
+        )
+        self.assertContains(
+            response,
+            "Último cambio",
         )
 
     def test_superuser_sees_all_callcenters(self):

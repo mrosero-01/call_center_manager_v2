@@ -1,5 +1,5 @@
 .callcenter-list {
-    max-width: 980px;
+    max-width: 1040px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -7,7 +7,7 @@
 
 .callcenter-card {
     width: 100%;
-    padding: 18px 20px;
+    padding: 16px 18px;
     border: 0;
     border-radius: 10px;
     background: var(--surface);
@@ -25,6 +25,7 @@
 .callcenter-heading {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
 }
 
@@ -33,24 +34,26 @@
     font-size: 19px;
 }
 
-.callcenter-code {
-    margin: 8px 0 0;
+.callcenter-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 8px;
     color: var(--text-secondary);
-    font-family: monospace;
-    font-size: 14px;
+    font-size: 13px;
 }
 
-.callcenter-client {
-    margin: 6px 0 0;
+.callcenter-last-change {
+    margin: 8px 0 0;
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .status-badge {
     padding: 5px 9px;
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 800;
 }
 
 .status-active {
@@ -61,6 +64,16 @@
 .status-inactive {
     background: var(--neutral-bg);
     color: #475569;
+}
+
+.status-scheduled {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.status-unscheduled {
+    background: var(--brand-gold-soft);
+    color: #8a5a10;
 }
 
 .callcenter-actions {
@@ -80,6 +93,11 @@
 
 .primary-link:hover {
     background: var(--accent-hover);
+}
+
+.primary-link:focus-visible {
+    outline: 3px solid rgba(239, 184, 93, 0.42);
+    outline-offset: 3px;
 }
 
 .empty-state {

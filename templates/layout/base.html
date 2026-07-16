@@ -11,7 +11,7 @@
     >
 
     <title>
-        {% block title %}Call Center Manager{% endblock %}
+        {% block title %}Siptic Manager{% endblock %}
     </title>
 
     <link
@@ -26,29 +26,30 @@
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <span class="brand-mark">CM</span>
+                <span class="brand-mark">SM</span>
 
                 <div>
-                    <strong>Call Manager</strong>
-                    <small>Administración</small>
+                    <strong>Siptic Manager</strong>
+                    <small>Call centers</small>
                 </div>
             </div>
 
             <nav class="sidebar-nav">
-                <a
-                    href="{% url 'home' %}"
-                    class="nav-link {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}"
-                >
-                    Inicio
-                </a>
-
-                
                 <a
                     href="{% url 'callcenters:list' %}"
                     class="nav-link {% if request.resolver_match.namespace == 'callcenters' or request.resolver_match.namespace == 'schedules' %}is-active{% endif %}"
                 >
                     Call Centers
                 </a>
+
+                {% if request.user.is_superuser %}
+                    <a
+                        href="{% url 'audit:list' %}"
+                        class="nav-link {% if request.resolver_match.namespace == 'audit' %}is-active{% endif %}"
+                    >
+                        Auditoría
+                    </a>
+                {% endif %}
             </nav>
 
             <div class="sidebar-footer">

@@ -1,0 +1,23 @@
+<div class="snapshot-days">
+    {% for day in days %}
+        <div class="snapshot-day">
+            <strong>
+                {{ day.label }}
+            </strong>
+
+            {% if day.intervals %}
+                <ul>
+                    {% for interval in day.intervals %}
+                        <li>
+                            {{ interval.start }}-{{ interval.end }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <span>
+                    Cerrado
+                </span>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>

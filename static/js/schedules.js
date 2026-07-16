@@ -38,7 +38,7 @@ const historyCloseButton = document.querySelector(
     "[data-history-close]"
 );
 const audioInputs = Array.from(
-    document.querySelectorAll('input[name="audio_key"]')
+    document.querySelectorAll('input[name="audio_file"]')
 );
 const audioPreviewButtons = Array.from(
     document.querySelectorAll("[data-audio-preview]")
@@ -875,7 +875,7 @@ function updatePanelText(panel) {
     });
 
     narrative.textContent = (
-        `Resumen: ${dayLabel} abierto `
+        `${dayLabel}: `
         + parts.join(" y ")
         + (hasInvalidRows
             ? ". Corrige los horarios marcados."
@@ -996,8 +996,15 @@ function createIntervalRow(
                 type="button"
                 class="remove-button"
                 data-remove-interval
+                aria-label="Quitar horario de ${dayLabel}"
             >
-                🗑
+                <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    focusable="false"
+                >
+                    <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-2 6h10l-.7 11H7.7L7 9Zm3 2v7h2v-7h-2Zm4 0v7h2v-7h-2Z"></path>
+                </svg>
             </button>
         </div>
 
@@ -1195,7 +1202,7 @@ document.addEventListener(
             && !event.target.closest("[data-audio-preview]")
         ) {
             const input = audioChoiceCard.querySelector(
-                'input[name="audio_key"]'
+                'input[name="audio_file"]'
             );
 
             if (input && !input.checked) {
@@ -1430,7 +1437,7 @@ if (form) {
         function (event) {
             if (
                 event.target.matches(
-                    'input[name="start_time"], input[name="end_time"], textarea[name="change_reason"], input[name="audio_key"]'
+                    'input[name="start_time"], input[name="end_time"], textarea[name="change_reason"], input[name="audio_file"]'
                 )
             ) {
                 updateEverything();
@@ -1442,7 +1449,7 @@ if (form) {
     form.addEventListener(
         "change",
         function (event) {
-            if (event.target.matches('input[name="audio_key"]')) {
+            if (event.target.matches('input[name="audio_file"]')) {
                 updateEverything();
                 markAsChanged();
             }

@@ -1,13 +1,19 @@
 :root {
-    --background: #f5f6f8;
+    /* Identidad inspirada en el brochure Siptic 2025. */
+    --background: #f7f8fb;
     --surface: #ffffff;
-    --sidebar: #17191d;
-    --sidebar-hover: #25282e;
-    --text-primary: #191b1f;
-    --text-secondary: #686d76;
-    --border: #e4e6ea;
-    --accent: #3157d5;
-    --accent-hover: #2848b3;
+    --sidebar: #202338;
+    --sidebar-hover: #2b304c;
+    --text-primary: #171a2c;
+    --text-secondary: #5f667a;
+    --border: #dfe3ee;
+    --accent: #59618f;
+    --accent-hover: #464d75;
+    --accent-soft: #eef0fa;
+    --accent-border: #cfd5ee;
+    --brand-gold: #efb85d;
+    --brand-gold-soft: #fff4df;
+    --brand-orange: #f28a3d;
     --success-bg: #d7f5e3;
     --success-bg-strong: #ccf0dc;
     --success-text: #166534;
@@ -18,6 +24,8 @@
     --sidebar-width: 260px;
     --radius: 12px;
 }
+
+/* Base */
 
 * {
     box-sizing: border-box;
@@ -49,6 +57,8 @@ a {
     text-decoration: none;
 }
 
+/* Layout principal */
+
 .app-shell {
     min-height: 100vh;
     display: grid;
@@ -67,6 +77,8 @@ a {
     overflow-y: auto;
 }
 
+/* Sidebar */
+
 .sidebar-brand {
     display: flex;
     align-items: center;
@@ -81,14 +93,14 @@ a {
 }
 
 .sidebar-brand small {
-    color: #989da7;
+    color: #c5c9d8;
 }
 
 .brand-mark {
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: #ffffff;
+    background: var(--brand-gold);
     color: var(--sidebar);
     display: grid;
     place-items: center;
@@ -112,10 +124,17 @@ a {
     color: #ffffff;
 }
 
+.nav-link:focus-visible,
+.logout-button:focus-visible {
+    outline: 3px solid rgba(239, 184, 93, 0.48);
+    outline-offset: 3px;
+}
+
 .nav-link.is-active {
     background: #ffffff;
     color: var(--sidebar);
     font-weight: 700;
+    box-shadow: inset 4px 0 0 var(--brand-gold);
 }
 
 .nav-link.is-active:hover {
@@ -126,7 +145,7 @@ a {
 .sidebar-footer {
     margin-top: auto;
     padding: 20px 8px 0;
-    border-top: 1px solid #30333a;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .user-summary {
@@ -137,7 +156,7 @@ a {
 }
 
 .user-summary small {
-    color: #989da7;
+    color: #c5c9d8;
 }
 
 .logout-button {
@@ -157,6 +176,8 @@ a {
 .app-main {
     padding: 48px;
 }
+
+/* Encabezados y tarjetas genéricas */
 
 .page-header {
     margin-bottom: 32px;

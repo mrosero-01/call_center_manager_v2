@@ -1,0 +1,166 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+
+{% block title %}
+Detalle de auditoría | Siptic Manager
+{% endblock %}
+
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/audit.css' %}"
+>
+{% endblock %}
+
+
+{% block content %}
+<section class="audit-page audit-detail-page">
+    <a
+        class="audit-back-link"
+        href="{% url 'audit:list' %}"
+    >
+        ← Volver a auditoría
+    </a>
+
+    <header class="page-header audit-header">
+        <p class="page-eyebrow">
+            Detalle de cambio
+        </p>
+
+        <h1>
+            {{ change_log.callcenter.name }}
+        </h1>
+
+        <p class="page-description">
+            Cambio aplicado el
+            {{ change_log.created_at|date:"d/m/Y H:i" }}
+            por {{ display_user }}.
+        </p>
+    </header>
+
+
+    <section class="audit-summary-card">
+        <div class="audit-summary-main">
+            <span class="audit-summary-icon">
+                ✓
+            </span>
+
+            <div>
+                <p>
+                    Cambio aplicado
+                </p>
+
+                <strong>
+                    {{ change_log.callcenter.name }}
+                </strong>
+
+                <span>
+                    {{ change_log.created_at|date:"d/m/Y H:i" }}
+                    · {{ display_user }}
+                </span>
+            </div>
+        </div>
+
+        <div class="audit-summary-tags">
+            <span>
+                {{ change_log.callcenter.codename }}
+            </span>
+
+            <span>
+                {{ change_log.audio_label|default:change_log.audio_file|default:"Sin audio" }}
+            </span>
+
+            <a href="{% url 'audit:list' %}?callcenter={{ change_log.callcenter.id }}">
+                Ver historial de este call center
+            </a>
+        </div>
+    </section>
+
+
+    <section class="audit-detail-grid">
+        <article class="audit-meta-card audit-reason-card">
+            <h2>
+                Motivo registrado
+            </h2>
+
+            <p class="audit-reason-text">
+                {{ change_log.reason }}
+            </p>
+        </article>
+
+        <article class="audit-meta-card audit-technical-card">
+            <div class="audit-card-title-row">
+                <h2>
+                    Datos técnicos
+                </h2>
+
+                <span>
+                    Versión del registro {{ change_log.after_snapshot.version|default:"1" }}
+                </span>
+            </div>
+
+            <dl>
+                <div>
+                    <dt>
+                        IP
+                    </dt>
+                    <dd>
+                        {{ change_log.ip_address|default:"No registrada" }}
+                    </dd>
+                </div>
+
+                <div>
+                    <dt>
+                        Zona horaria
+                    </dt>
+                    <dd>
+                        {{ change_log.after_snapshot.timezone|default:change_log.callcenter.timezone }}
+                    </dd>
+                </div>
+
+                <div class="technical-browser">
+                    <dt>
+                        Navegador
+                    </dt>
+                    <dd>
+                        {{ change_log.user_agent|default:"No registrado" }}
+                    </dd>
+                </div>
+            </dl>
+        </article>
+    </section>
+
+
+    <section class="snapshot-grid">
+        <article class="snapshot-card snapshot-before">
+            <div class="snapshot-card-heading">
+                <span>
+                    Antes
+                </span>
+
+                <h2>
+                    Horario anterior
+                </h2>
+            </div>
+
+            {% include "audit/partials/snapshot_days.html" with days=before_days %}
+        </article>
+
+        <article class="snapshot-card snapshot-after">
+            <div class="snapshot-card-heading">
+                <span>
+                    Después
+                </span>
+
+                <h2>
+                    Horario aplicado
+                </h2>
+            </div>
+
+            {% include "audit/partials/snapshot_days.html" with days=after_days %}
+        </article>
+    </section>
+</section>
+{% endblock %}

@@ -44,7 +44,7 @@ class ScheduleEditorTests(TestCase):
         starts,
         ends,
         reason,
-        audio_key=ScheduleAudio.SCHEDULE_CHANGED,
+        audio_file=ScheduleAudio.SCHEDULE_CHANGED,
     ):
         return self.client.post(
             self.url,
@@ -53,8 +53,10 @@ class ScheduleEditorTests(TestCase):
                 "start_time": starts,
                 "end_time": ends,
                 "change_reason": reason,
-                "audio_key": audio_key,
+                "audio_file": audio_file,
             },
+            REMOTE_ADDR="127.0.0.10",
+            HTTP_USER_AGENT="Schedule test browser",
         )
 
     def test_requires_change_reason(self):
@@ -85,7 +87,7 @@ class ScheduleEditorTests(TestCase):
             ["08:00"],
             ["12:00"],
             "Ajuste operativo",
-            audio_key="",
+            audio_file="",
         )
 
         self.assertEqual(response.status_code, 302)
@@ -274,7 +276,7 @@ class ScheduleEditorTests(TestCase):
                 "18:00",
             ],
             "Cambio por capacitación",
-            audio_key=ScheduleAudio.SPECIAL_DAY,
+            audio_file=ScheduleAudio.SPECIAL_DAY,
         )
 
         self.assertEqual(response.status_code, 302)
@@ -298,6 +300,39 @@ class ScheduleEditorTests(TestCase):
             "Cambio por capacitación",
         )
         self.assertEqual(
-            change_log.audio_key,
+            change_log.audio_file,
             ScheduleAudio.SPECIAL_DAY,
+        )
+        self.assertEqual(
+            change_log.audio_label,
+            ScheduleAudio.SPECIAL_DAY.label,
+        )
+        self.assertEqual(
+            change_log.before_snapshot["codename"],
+            self.callcenter.codename,
+        )
+        self.assertEqual(
+            change_log.before_snapshot["days"][Weekday.THURSDAY],
+            [],
+        )
+        self.assertEqual(
+            change_log.after_snapshot["days"][Weekday.THURSDAY],
+            [
+                {
+                    "start": "08:00",
+                    "end": "12:00",
+                },
+                {
+                    "start": "14:00",
+                    "end": "18:00",
+                },
+            ],
+        )
+        self.assertEqual(
+            change_log.ip_address,
+            "127.0.0.10",
+        )
+        self.assertEqual(
+            change_log.user_agent,
+            "Schedule test browser",
         )

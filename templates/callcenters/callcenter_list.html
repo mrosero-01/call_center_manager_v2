@@ -3,7 +3,7 @@
 
 
 {% block title %}
-Call Centers | Call Center Manager
+Siptic Manager
 {% endblock %}
 
 
@@ -23,12 +23,11 @@ Call Centers | Call Center Manager
         </p>
 
         <h1>
-            Call Centers
+            Selecciona un call center
         </h1>
 
         <p class="page-description">
-            Selecciona un call center para consultar
-            o administrar su horario.
+            Elige uno para editar sus horarios de atención.
         </p>
     </div>
 </header>
@@ -52,23 +51,46 @@ Call Centers | Call Center Manager
                             Inactivo
                         </span>
                     {% endif %}
+
+                    {% if callcenter.has_schedule %}
+                        <span class="status-badge status-scheduled">
+                            Con horario
+                        </span>
+                    {% else %}
+                        <span class="status-badge status-unscheduled">
+                            Sin horario
+                        </span>
+                    {% endif %}
                 </div>
 
-                <p class="callcenter-code">
-                    {{ callcenter.codename }}
-                </p>
+                <div class="callcenter-meta">
+                    <span>
+                        {{ callcenter.client.name }}
+                    </span>
 
-                <p class="callcenter-client">
-                    {{ callcenter.client.name }}
-                </p>
+                    <span>
+                        Código: {{ callcenter.codename }}
+                    </span>
+                </div>
+
+                {% if callcenter.latest_change_at %}
+                    <p class="callcenter-last-change">
+                        Último cambio:
+                        {{ callcenter.latest_change_at|date:"d/m/Y H:i" }}
+                    </p>
+                {% else %}
+                    <p class="callcenter-last-change">
+                        Sin cambios registrados todavía.
+                    </p>
+                {% endif %}
             </div>
 
             <div class="callcenter-actions">
                 <a
-                     href="{% url 'schedules:editor' callcenter.codename %}"
+                    href="{% url 'schedules:editor' callcenter.codename %}"
                     class="primary-link"
                 >
-                    Gestionar horario
+                    Editar horario
                 </a>
             </div>
         </article>
@@ -79,8 +101,8 @@ Call Centers | Call Center Manager
             </h2>
 
             <p>
-                No tienes call centers asociados
-                actualmente.
+                No tienes call centers asignados.
+                Contacta al administrador si necesitas acceso.
             </p>
         </div>
     {% endfor %}

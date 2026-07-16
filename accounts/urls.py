@@ -1,5 +1,6 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import views
 
@@ -17,7 +18,10 @@ urlpatterns = [
     ),
     path(
         "",
-        views.home,
-        name="home",
+        RedirectView.as_view(
+            pattern_name="callcenters:list",
+            permanent=False,
+        ),
+        name="root",
     ),
 ]

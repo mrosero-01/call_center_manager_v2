@@ -9,6 +9,10 @@ from django.urls import reverse
 
 from callcenters.selectors import get_callcenter_for_user
 
+from .audit import (
+    build_schedule_snapshot,
+    create_schedule_change_log,
+)
 from .models import (
     ScheduleAudio,
     ScheduleChangeLog,
@@ -113,7 +117,7 @@ def _get_selected_weekday(value):
     return Weekday.MONDAY
 
 
-def _get_audio_key(value):
+def _get_audio_file(value):
     if value in SCHEDULE_AUDIO_LABELS:
         return value
 
@@ -249,9 +253,12 @@ def _format_change_log(change_log):
             else "Usuario eliminado"
         ),
         "reason": change_log.reason,
-        "audio_label": SCHEDULE_AUDIO_LABELS.get(
-            change_log.audio_key,
-            change_log.audio_key,
+        "audio_label": (
+            change_log.audio_label
+            or SCHEDULE_AUDIO_LABELS.get(
+                change_log.audio_file,
+                change_log.audio_file,
+            )
         ),
         "created_at": change_log.created_at,
     }
@@ -434,8 +441,9 @@ def schedule_editor(request, codename):
             "change_reason",
             "",
         ).strip()
-        audio_key = _get_audio_key(
-            request.POST.get("audio_key"),
+        audio_file = _get_audio_file(
+            request.POST.get("audio_file")
+            or request.POST.get("audio_key"),
         )
 
         (
@@ -481,7 +489,7 @@ def schedule_editor(request, codename):
                     "errors": errors,
                     "change_reason": change_reason,
                     "audio_options": SCHEDULE_AUDIO_OPTIONS,
-                    "selected_audio_key": audio_key,
+                    "selected_audio_file": audio_file,
                     **_get_change_context(callcenter),
                     "selected_weekday": selected_weekday,
                     "save_feedback": "",
@@ -489,6 +497,10 @@ def schedule_editor(request, codename):
             )
 
         with transaction.atomic():
+            before_snapshot = build_schedule_snapshot(
+                callcenter,
+            )
+
             ScheduleInterval.objects.filter(
                 callcenter=callcenter,
             ).delete()
@@ -505,17 +517,22 @@ def schedule_editor(request, codename):
                 ]
             )
 
-            change_log_data = {
-                "callcenter": callcenter,
-                "user": request.user,
-                "reason": change_reason,
-            }
+            after_snapshot = build_schedule_snapshot(
+                callcenter,
+            )
 
-            if audio_key:
-                change_log_data["audio_key"] = audio_key
-
-            ScheduleChangeLog.objects.create(
-                **change_log_data,
+            create_schedule_change_log(
+                callcenter=callcenter,
+                user=request.user,
+                reason=change_reason,
+                before_snapshot=before_snapshot,
+                after_snapshot=after_snapshot,
+                audio_file=audio_file,
+                audio_label=SCHEDULE_AUDIO_LABELS.get(
+                    audio_file,
+                    "",
+                ),
+                request=request,
             )
 
         editor_url = reverse(
@@ -540,7 +557,10 @@ def schedule_editor(request, codename):
     save_feedback = ""
 
     if request.GET.get("saved") == "1":
-        save_feedback = "Todos los cambios guardados"
+        save_feedback = (
+            "Horario guardado. "
+            f"Sigues editando {WEEKDAY_LABELS[selected_weekday]}."
+        )
 
     return render(
         request,
@@ -556,7 +576,7 @@ def schedule_editor(request, codename):
             "errors": [],
             "change_reason": "",
             "audio_options": SCHEDULE_AUDIO_OPTIONS,
-            "selected_audio_key": "",
+            "selected_audio_file": "",
             **_get_change_context(callcenter),
             "selected_weekday": selected_weekday,
             "save_feedback": save_feedback,
