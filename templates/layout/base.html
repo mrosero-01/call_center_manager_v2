@@ -23,6 +23,13 @@
 </head>
 
 <body>
+    <a
+        class="skip-link"
+        href="#contenido-principal"
+    >
+        Saltar al contenido
+    </a>
+
     <div class="app-shell">
         <aside class="sidebar">
             <div class="sidebar-brand">
@@ -38,14 +45,24 @@
                 <a
                     href="{% url 'callcenters:list' %}"
                     class="nav-link {% if request.resolver_match.namespace == 'callcenters' or request.resolver_match.namespace == 'schedules' %}is-active{% endif %}"
+                    {% if request.resolver_match.namespace == 'callcenters' or request.resolver_match.namespace == 'schedules' %}aria-current="page"{% endif %}
                 >
                     Call Centers
                 </a>
 
                 {% if request.user.is_superuser %}
                     <a
+                        href="{% url 'user_list' %}"
+                        class="nav-link {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_update' or request.resolver_match.url_name == 'user_password_update' %}is-active{% endif %}"
+                        {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_update' or request.resolver_match.url_name == 'user_password_update' %}aria-current="page"{% endif %}
+                    >
+                        Usuarios
+                    </a>
+
+                    <a
                         href="{% url 'audit:list' %}"
                         class="nav-link {% if request.resolver_match.namespace == 'audit' %}is-active{% endif %}"
+                        {% if request.resolver_match.namespace == 'audit' %}aria-current="page"{% endif %}
                     >
                         Auditoría
                     </a>
@@ -85,7 +102,11 @@
             </div>
         </aside>
 
-        <main class="app-main">
+        <main
+            id="contenido-principal"
+            class="app-main"
+            tabindex="-1"
+        >
             {% block content %}{% endblock %}
         </main>
     </div>

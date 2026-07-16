@@ -21,6 +21,23 @@ def _login_rate_key(request):
 class RateLimitedLoginView(auth_views.LoginView):
     template_name = "accounts/login.html"
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["username"].widget.attrs.update(
+            {
+                "autocomplete": "username",
+                "placeholder": "Usuario",
+            }
+        )
+        form.fields["password"].widget.attrs.update(
+            {
+                "autocomplete": "current-password",
+                "placeholder": "Contraseña",
+            }
+        )
+
+        return form
+
     def dispatch(self, request, *args, **kwargs):
         if request.method == "POST":
             attempts = cache.get(

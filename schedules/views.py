@@ -61,6 +61,7 @@ WEEKDAY_LABELS = {
 VALID_WEEKDAYS = set(WEEKDAY_LABELS)
 SAVE_RATE_LIMIT = 10
 SAVE_RATE_WINDOW_SECONDS = 60
+MAX_INTERVALS_PER_DAY = 2
 
 SCHEDULE_AUDIO_OPTIONS = [
     {
@@ -167,6 +168,28 @@ def _time_to_string(value):
     return value.strftime("%H:%M")
 
 
+def _format_time_label(value):
+    if isinstance(value, str):
+        try:
+            value = _parse_time(value)
+        except ValueError:
+            return value
+
+    hour = value.hour
+    minute = value.minute
+    display_hour = hour % 12 or 12
+    period = "a. m." if hour < 12 else "p. m."
+
+    return f"{display_hour:02d}:{minute:02d} {period}"
+
+
+def _format_interval_label(interval):
+    return (
+        f"{_format_time_label(interval['start_time'])} - "
+        f"{_format_time_label(interval['end_time'])}"
+    )
+
+
 def _build_weekly_sections(rows):
     grouped = {
         day["value"]: []
@@ -183,6 +206,12 @@ def _build_weekly_sections(rows):
             {
                 "start_time": row["start_time"],
                 "end_time": row["end_time"],
+                "start_time_label": _format_time_label(
+                    row["start_time"],
+                ),
+                "end_time_label": _format_time_label(
+                    row["end_time"],
+                ),
             }
         )
 
@@ -306,6 +335,14 @@ def _validate_overlaps(intervals):
         ).append(interval)
 
     for weekday, day_intervals in grouped.items():
+        if len(day_intervals) > MAX_INTERVALS_PER_DAY:
+            errors.append(
+                (
+                    f"{WEEKDAY_LABELS[weekday]} puede tener máximo "
+                    f"{MAX_INTERVALS_PER_DAY} horarios."
+                )
+            )
+
         ordered = sorted(
             day_intervals,
             key=lambda item: item["start_time"],
@@ -324,11 +361,9 @@ def _validate_overlaps(intervals):
                 errors.append(
                     f"En {WEEKDAY_LABELS[weekday]}, "
                     f"el horario "
-                    f"{current['start_time_raw']} - "
-                    f"{current['end_time_raw']} "
+                    f"{_format_interval_label(current)} "
                     "se cruza con "
-                    f"{active_interval['start_time_raw']} - "
-                    f"{active_interval['end_time_raw']}."
+                    f"{_format_interval_label(active_interval)}."
                 )
 
             if (
@@ -470,6 +505,11 @@ def schedule_editor(request, codename):
                 "Escribe el motivo del cambio."
             )
 
+        if not audio_file:
+            errors.append(
+                "Selecciona el mensaje de audio que escuchará el cliente."
+            )
+
         if errors:
             weekly_sections = _build_weekly_sections(
                 raw_rows,
@@ -500,6 +540,46 @@ def schedule_editor(request, codename):
             before_snapshot = build_schedule_snapshot(
                 callcenter,
             )
+
+            proposed_rows = sorted(
+                [
+                    {
+                        "weekday": interval["weekday"],
+                        "start_time": _time_to_string(
+                            interval["start_time"],
+                        ),
+                        "end_time": _time_to_string(
+                            interval["end_time"],
+                        ),
+                    }
+                    for interval in intervals
+                ],
+                key=lambda item: (
+                    item["weekday"],
+                    item["start_time"],
+                    item["end_time"],
+                ),
+            )
+            current_rows = sorted(
+                _get_schedule_rows(callcenter),
+                key=lambda item: (
+                    item["weekday"],
+                    item["start_time"],
+                    item["end_time"],
+                ),
+            )
+
+            if proposed_rows == current_rows:
+                editor_url = reverse(
+                    "schedules:editor",
+                    kwargs={
+                        "codename": callcenter.codename,
+                    },
+                )
+
+                return redirect(
+                    f"{editor_url}?day={selected_weekday}&saved=unchanged",
+                )
 
             ScheduleInterval.objects.filter(
                 callcenter=callcenter,
@@ -559,6 +639,11 @@ def schedule_editor(request, codename):
     if request.GET.get("saved") == "1":
         save_feedback = (
             "Horario guardado. "
+            f"Sigues editando {WEEKDAY_LABELS[selected_weekday]}."
+        )
+    elif request.GET.get("saved") == "unchanged":
+        save_feedback = (
+            "No había cambios nuevos. "
             f"Sigues editando {WEEKDAY_LABELS[selected_weekday]}."
         )
 

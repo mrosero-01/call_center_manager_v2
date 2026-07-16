@@ -1,7 +1,6 @@
 .callcenter-list {
-    max-width: 1040px;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
     gap: 12px;
 }
 
@@ -120,6 +119,10 @@
 }
 
 @media (max-width: 700px) {
+    .callcenter-list {
+        grid-template-columns: 1fr;
+    }
+
     .callcenter-card {
         align-items: stretch;
         flex-direction: column;

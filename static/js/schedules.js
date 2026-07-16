@@ -1,6 +1,7 @@
 let intervalSequence = Date.now();
 let hasUnsavedChanges = false;
 let isSubmitting = false;
+const MAX_INTERVALS_PER_DAY = 2;
 
 
 const form = document.querySelector("[data-schedule-form]");
@@ -123,6 +124,35 @@ function minutesToTime(minutes) {
         String(hours).padStart(2, "0"),
         String(rest).padStart(2, "0"),
     ].join(":");
+}
+
+
+function formatTimeLabel(value) {
+    const minutes = typeof value === "number"
+        ? value
+        : timeToMinutes(value);
+
+    if (minutes === null) {
+        return value || "";
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    const displayHours = hours % 12 || 12;
+    const period = hours < 12 ? "a. m." : "p. m.";
+
+    return (
+        `${String(displayHours).padStart(2, "0")}:`
+        + `${String(rest).padStart(2, "0")} ${period}`
+    );
+}
+
+
+function formatRangeLabel(range) {
+    return (
+        `${formatTimeLabel(range.startMinutes)} - `
+        + formatTimeLabel(range.endMinutes)
+    );
 }
 
 
@@ -471,7 +501,11 @@ function updateAudioValidity() {
         return;
     }
 
-    firstAudioInput.setCustomValidity("");
+    firstAudioInput.setCustomValidity(
+        getSelectedAudioInput()
+            ? ""
+            : "Selecciona un mensaje de audio."
+    );
 }
 
 
@@ -551,8 +585,8 @@ function validatePanelOverlaps(panel) {
 
         if (range.startMinutes < activeRange.endMinutes) {
             const message = (
-                `El horario ${range.start}-${range.end} `
-                + `se cruza con ${activeRange.start}-${activeRange.end}.`
+                `El horario ${formatRangeLabel(range)} `
+                + `se cruza con ${formatRangeLabel(activeRange)}.`
             );
             const error = range.row.querySelector("[data-row-error]");
 
@@ -630,6 +664,10 @@ function updateSaveState() {
         reasonInput
         && !reasonInput.value.trim()
     );
+    const audioMissing = (
+        audioInputs.length > 0
+        && !getSelectedAudioInput()
+    );
     const reasonIsVisible = (
         reasonSection
         && !reasonSection.hidden
@@ -671,6 +709,10 @@ function updateSaveState() {
             unsavedIndicator.textContent = (
                 "Agrega un motivo para guardar"
             );
+        } else if (reasonIsVisible && audioMissing) {
+            unsavedIndicator.textContent = (
+                "Selecciona un audio para guardar"
+            );
         } else {
             unsavedIndicator.textContent = (
                 "Hay cambios sin guardar"
@@ -688,6 +730,7 @@ function updateSaveState() {
             !hasUnsavedChanges
             || hasErrors
             || reasonMissing
+            || audioMissing
         );
     }
 }
@@ -773,11 +816,17 @@ function updatePanelState(panel) {
         });
 
     if (addButton) {
-        addButton.disabled = false;
-        addButton.textContent = "+ Agregar horario";
+        const reachedLimit = rows.length >= MAX_INTERVALS_PER_DAY;
+
+        addButton.disabled = reachedLimit;
+        addButton.textContent = reachedLimit
+            ? "Máximo 2 horarios"
+            : "+ Agregar horario";
         addButton.setAttribute(
             "aria-label",
-            `Agregar horario para ${panel.dataset.dayLabel}`
+            reachedLimit
+                ? `${panel.dataset.dayLabel} ya tiene el máximo de horarios`
+                : `Agregar horario para ${panel.dataset.dayLabel}`
         );
     }
 }
@@ -841,9 +890,7 @@ function updatePanelText(panel) {
         return;
     }
 
-    const summary = ranges.map(function (range) {
-        return `${range.start}-${range.end}`;
-    });
+    const summary = ranges.map(formatRangeLabel);
 
     if (hasInvalidRows) {
         summary.push("Revisar");
@@ -858,7 +905,10 @@ function updatePanelText(panel) {
     const parts = [];
 
     ranges.forEach(function (range, index) {
-        parts.push(`de ${range.start} a ${range.end}`);
+        parts.push(
+            `de ${formatTimeLabel(range.startMinutes)} `
+            + `a ${formatTimeLabel(range.endMinutes)}`
+        );
 
         const nextRange = ranges[index + 1];
 
@@ -1095,6 +1145,13 @@ function setDayState(panel, state) {
 
 
 function addInterval(panel) {
+    if (
+        !panel
+        || getPanelRows(panel).length >= MAX_INTERVALS_PER_DAY
+    ) {
+        return;
+    }
+
     const weekday = panel.dataset.weekday;
     const dayLabel = panel.dataset.dayLabel;
     const list = panel.querySelector(
@@ -1467,6 +1524,10 @@ if (form) {
                 reasonInput
                 && !reasonInput.value.trim()
             );
+            const audioMissing = (
+                audioInputs.length > 0
+                && !getSelectedAudioInput()
+            );
             if (
                 hasScheduleErrors()
             ) {
@@ -1492,6 +1553,20 @@ if (form) {
                         reasonInput.focus();
                         return;
                     }
+                }
+
+                return;
+            }
+
+            if (audioMissing) {
+                event.preventDefault();
+                updateSaveState();
+
+                const firstAudioInput = getFirstAudioInput();
+
+                if (firstAudioInput) {
+                    firstAudioInput.reportValidity();
+                    firstAudioInput.focus();
                 }
 
                 return;

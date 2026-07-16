@@ -81,7 +81,7 @@ class ScheduleEditorTests(TestCase):
             0,
         )
 
-    def test_audio_reference_is_optional(self):
+    def test_requires_audio_reference(self):
         response = self.post_schedule(
             [Weekday.MONDAY],
             ["08:00"],
@@ -90,17 +90,21 @@ class ScheduleEditorTests(TestCase):
             audio_file="",
         )
 
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Selecciona el mensaje de audio que escuchará el cliente.",
+        )
         self.assertEqual(
             ScheduleInterval.objects.count(),
-            1,
+            0,
         )
         self.assertEqual(
             ScheduleChangeLog.objects.count(),
-            1,
+            0,
         )
 
-    def test_allows_more_than_two_intervals_per_day(self):
+    def test_rejects_more_than_two_intervals_per_day(self):
         response = self.post_schedule(
             [
                 Weekday.MONDAY,
@@ -122,14 +126,18 @@ class ScheduleEditorTests(TestCase):
 
         self.assertEqual(
             response.status_code,
-            302,
+            200,
+        )
+        self.assertContains(
+            response,
+            "Lunes puede tener máximo 2 horarios.",
         )
         self.assertEqual(
             ScheduleInterval.objects.filter(
                 callcenter=self.callcenter,
                 weekday=Weekday.MONDAY,
             ).count(),
-            3,
+            0,
         )
 
     def test_rejects_end_time_before_or_equal_start_time(self):
@@ -205,7 +213,7 @@ class ScheduleEditorTests(TestCase):
             response = self.post_schedule(
                 [Weekday.MONDAY],
                 ["08:00"],
-                ["12:00"],
+                [f"12:{index:02d}"],
                 f"Ajuste operativo {index}",
             )
 
@@ -335,4 +343,32 @@ class ScheduleEditorTests(TestCase):
         self.assertEqual(
             change_log.user_agent,
             "Schedule test browser",
+        )
+
+    def test_same_schedule_does_not_create_duplicate_audit_log(self):
+        self.post_schedule(
+            [Weekday.FRIDAY],
+            ["08:00"],
+            ["12:00"],
+            "Ajuste operativo",
+        )
+
+        response = self.post_schedule(
+            [Weekday.FRIDAY],
+            ["08:00"],
+            ["12:00"],
+            "Ajuste repetido",
+        )
+
+        self.assertRedirects(
+            response,
+            f"{self.url}?day={Weekday.MONDAY}&saved=unchanged",
+        )
+        self.assertEqual(
+            ScheduleInterval.objects.count(),
+            1,
+        )
+        self.assertEqual(
+            ScheduleChangeLog.objects.count(),
+            1,
         )

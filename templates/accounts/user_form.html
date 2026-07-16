@@ -1,0 +1,272 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+
+{% block title %}
+{{ title }} | Siptic Manager
+{% endblock %}
+
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/users.css' %}"
+>
+{% endblock %}
+
+
+{% block content %}
+<section class="users-page users-form-page">
+    <a
+        class="back-link"
+        href="{% url 'user_list' %}"
+    >
+        ← Volver a usuarios
+    </a>
+
+    <header class="page-header users-header">
+        <div>
+            <p class="page-eyebrow">
+                Administración
+            </p>
+
+            <h1>
+                {{ title }}
+            </h1>
+
+            <p class="page-description">
+                El cliente asignado determina los call centers disponibles
+                para este usuario.
+            </p>
+        </div>
+
+        {% if not is_create %}
+            <a
+                class="secondary-action"
+                href="{% url 'user_password_update' managed_user.pk %}"
+            >
+                Cambiar contraseña
+            </a>
+        {% endif %}
+    </header>
+
+    <form
+        class="managed-user-form"
+        method="post"
+        novalidate
+        data-user-form
+    >
+        {% csrf_token %}
+
+        <div
+            class="form-alert"
+            data-form-alert
+            hidden
+            role="alert"
+        ></div>
+
+        {% if form.non_field_errors %}
+            <div
+                class="form-error-summary"
+                role="alert"
+            >
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <section class="form-card">
+            <div class="form-card-heading">
+                <h2>
+                    Datos de acceso
+                </h2>
+
+                {% if is_create %}
+                    <p>
+                        Usuario y contraseña para iniciar sesión.
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.username.id_for_label }}">
+                        {{ form.username.label }}
+                    </label>
+                    {{ form.username }}
+                    {{ form.username.errors }}
+                </div>
+
+                {% if is_create %}
+                    <div class="form-field">
+                        <label for="{{ form.password1.id_for_label }}">
+                            {{ form.password1.label }}
+                        </label>
+                        {{ form.password1 }}
+                        {{ form.password1.errors }}
+                    </div>
+
+                    <div class="form-field">
+                        <label for="{{ form.password2.id_for_label }}">
+                            {{ form.password2.label }}
+                        </label>
+                        {{ form.password2 }}
+                        {{ form.password2.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="form-card">
+            <div class="form-card-heading">
+                <h2>
+                    Datos personales
+                </h2>
+
+                <p>
+                    Ayudan a identificar al usuario en auditoría.
+                </p>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="{{ form.first_name.id_for_label }}">
+                        {{ form.first_name.label }}
+                    </label>
+                    {{ form.first_name }}
+                    {{ form.first_name.errors }}
+                </div>
+
+                <div class="form-field">
+                    <label for="{{ form.last_name.id_for_label }}">
+                        {{ form.last_name.label }}
+                    </label>
+                    {{ form.last_name }}
+                    {{ form.last_name.errors }}
+                </div>
+
+                <div class="form-field field-full">
+                    <label for="{{ form.email.id_for_label }}">
+                        {{ form.email.label }}
+                    </label>
+                    {{ form.email }}
+                    {{ form.email.errors }}
+                </div>
+            </div>
+        </section>
+
+        <section class="form-card">
+            <div class="form-card-heading">
+                <h2>
+                    Asignación y permisos
+                </h2>
+
+                <p>
+                    El cliente define qué call centers podrá gestionar.
+                </p>
+            </div>
+
+            <div class="form-grid one-column">
+                <div class="form-field">
+                    <label for="{{ form.client.id_for_label }}">
+                        {{ form.client.label }}
+                    </label>
+                    {{ form.client }}
+                    {{ form.client.errors }}
+                    <p class="field-help">
+                        Este usuario podrá acceder a todos los call centers
+                        de este cliente.
+                    </p>
+                </div>
+
+                <label class="checkbox-field">
+                    {{ form.is_active }}
+                    <span class="checkbox-copy">
+                        <strong>
+                            {{ form.is_active.label }}
+                        </strong>
+
+                        <small>
+                            Si está inactivo, no podrá acceder al sistema.
+                        </small>
+                    </span>
+                </label>
+            </div>
+
+            <div
+                class="client-preview"
+                data-client-preview
+            >
+                <strong>
+                    Call centers disponibles
+                </strong>
+
+                <p class="field-help">
+                    Este usuario podrá acceder a todos los call centers
+                    del cliente seleccionado.
+                </p>
+
+                <div data-client-callcenter-list>
+                    {% if selected_client and client_callcenters %}
+                        <ul class="client-callcenter-list">
+                            {% for callcenter in client_callcenters %}
+                                <li>
+                                    <span>
+                                        <strong>
+                                            {{ callcenter.name }}
+                                        </strong>
+
+                                        <small>
+                                            {{ callcenter.codename }}
+                                        </small>
+                                    </span>
+
+                                    {% if callcenter.is_active %}
+                                        <em class="status-pill is-active">
+                                            Activo
+                                        </em>
+                                    {% else %}
+                                        <em class="status-pill is-inactive">
+                                            Inactivo
+                                        </em>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% elif selected_client %}
+                        <p>
+                            Este cliente aún no tiene call centers registrados.
+                        </p>
+                    {% else %}
+                        <p>
+                            Selecciona un cliente para ver sus call centers.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <div class="form-toolbar">
+            <a
+                class="secondary-action"
+                href="{% url 'user_list' %}"
+            >
+                Cancelar
+            </a>
+
+            <button
+                type="submit"
+                class="primary-action"
+            >
+                {{ submit_label }}
+            </button>
+        </div>
+    </form>
+
+    {{ client_callcenter_map|json_script:"client-callcenter-data" }}
+</section>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'js/users.js' %}"></script>
+{% endblock %}

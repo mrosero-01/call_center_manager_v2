@@ -1,0 +1,286 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+
+{% block title %}
+Usuarios | Siptic Manager
+{% endblock %}
+
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/users.css' %}"
+>
+{% endblock %}
+
+
+{% block content %}
+<section class="users-page">
+    <header class="page-header users-header">
+        <div>
+            <p class="page-eyebrow">
+                Administración
+            </p>
+
+            <h1>
+                Usuarios
+            </h1>
+
+            <p class="page-description">
+                Crea usuarios normales y asígnalos a un cliente.
+                Verán todos los call centers de ese cliente.
+            </p>
+        </div>
+
+        <a
+            class="primary-action"
+            href="{% url 'user_create' %}"
+        >
+            Crear usuario
+        </a>
+    </header>
+
+    {% if messages %}
+        <div
+            class="users-messages"
+            role="status"
+            aria-live="polite"
+        >
+            {% for message in messages %}
+                <p class="users-message {{ message.tags }}">
+                    {{ message }}
+                </p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form
+        class="users-filters"
+        method="get"
+    >
+        <label>
+            <span>
+                Buscar
+            </span>
+            <input
+                type="search"
+                name="q"
+                value="{{ filters.q }}"
+                placeholder="Usuario, nombre o email"
+            >
+        </label>
+
+        <label>
+            <span>
+                Cliente
+            </span>
+            <select name="client">
+                <option value="">
+                    Todos
+                </option>
+                {% for client in clients %}
+                    <option
+                        value="{{ client.id }}"
+                        {% if filters.client == client.id|stringformat:"s" %}selected{% endif %}
+                    >
+                        {{ client.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            <span>
+                Estado
+            </span>
+            <select name="status">
+                <option value="">
+                    Todos
+                </option>
+                <option
+                    value="active"
+                    {% if filters.status == "active" %}selected{% endif %}
+                >
+                    Activos
+                </option>
+                <option
+                    value="inactive"
+                    {% if filters.status == "inactive" %}selected{% endif %}
+                >
+                    Inactivos
+                </option>
+            </select>
+        </label>
+
+        <div class="filter-actions">
+            <button type="submit">
+                Filtrar
+            </button>
+
+            <a href="{% url 'user_list' %}">
+                Limpiar
+            </a>
+        </div>
+    </form>
+
+    <section class="users-card">
+        <div class="users-card-header">
+            <div>
+                <h2>
+                    Usuarios normales
+                </h2>
+
+                <p>
+                    {% if has_managed_users %}
+                        {{ total_count }} usuarios encontrados
+                    {% else %}
+                        Aún no hay usuarios normales creados
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="users-table-wrap">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>
+                            Usuario
+                        </th>
+                        <th>
+                            Nombre
+                        </th>
+                        <th>
+                            Email
+                        </th>
+                        <th>
+                            Cliente
+                        </th>
+                        <th>
+                            Call centers disponibles
+                        </th>
+                        <th>
+                            Estado
+                        </th>
+                        <th>
+                            Último acceso
+                        </th>
+                        <th>
+                            Acción
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for user_item in users %}
+                        <tr>
+                            <td>
+                                <strong>
+                                    {{ user_item.username }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                <span>
+                                    {{ user_item.get_full_name|default:"Sin nombre" }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if user_item.email %}
+                                    <span>
+                                        {{ user_item.email }}
+                                    </span>
+                                {% else %}
+                                    <span>
+                                        Sin email
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ user_item.client.name }}
+                            </td>
+
+                            <td>
+                                {{ user_item.callcenter_count }}
+                            </td>
+
+                            <td>
+                                {% if user_item.is_active %}
+                                    <span class="status-pill is-active">
+                                        Activo
+                                    </span>
+                                {% else %}
+                                    <span class="status-pill is-inactive">
+                                        Inactivo
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if user_item.last_login %}
+                                    {{ user_item.last_login|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    Sin acceso
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <a
+                                    class="user-row-action"
+                                    href="{% url 'user_update' user_item.pk %}"
+                                >
+                                    Editar
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="users-empty">
+                                    {% if has_managed_users %}
+                                        No hay usuarios con esos filtros.
+                                    {% else %}
+                                        <strong>
+                                            Aún no hay usuarios normales creados.
+                                        </strong>
+
+                                        <span>
+                                            Crea el primero para asignarlo a un cliente.
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if users.has_other_pages %}
+            <nav
+                class="users-pagination"
+                aria-label="Paginación"
+            >
+                {% if users.has_previous %}
+                    <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ users.previous_page_number }}">
+                        Anterior
+                    </a>
+                {% endif %}
+
+                <span>
+                    Página {{ users.number }} de {{ users.paginator.num_pages }}
+                </span>
+
+                {% if users.has_next %}
+                    <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ users.next_page_number }}">
+                        Siguiente
+                    </a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

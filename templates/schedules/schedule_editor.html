@@ -148,7 +148,7 @@ Siptic Manager
                         {% if day.intervals %}
                             {% for interval in day.intervals %}
                                 <span>
-                                    {{ interval.start_time }}-{{ interval.end_time }}
+                                    {{ interval.start_time_label }} - {{ interval.end_time_label }}
                                 </span>
                             {% endfor %}
                         {% else %}
@@ -409,7 +409,7 @@ Siptic Manager
                 </legend>
 
                 <p class="audio-choice-note">
-                    Por ahora, cuando el call center esté cerrado, Asterisk reproducirá el audio configurado en el dialplan.
+                    Elige el mensaje que escuchará el cliente cuando el cambio de horario aplique.
                 </p>
 
                 <div class="audio-choice-list">
@@ -420,6 +420,7 @@ Siptic Manager
                                 type="radio"
                                 name="audio_file"
                                 value="{{ option.key }}"
+                                required
                                 {% if selected_audio_file == option.key %}checked{% endif %}
                             >
 

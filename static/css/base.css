@@ -48,13 +48,40 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
     font: inherit;
 }
 
 a {
     color: inherit;
     text-decoration: none;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    cursor: not-allowed;
+}
+
+.skip-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    transform: translateY(-160%);
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--text-primary);
+    font-weight: 800;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+    outline: 3px solid rgba(239, 184, 93, 0.48);
 }
 
 /* Layout principal */
@@ -175,6 +202,15 @@ a {
 
 .app-main {
     padding: 48px;
+}
+
+.page-header,
+.callcenter-list,
+.users-page,
+.audit-page,
+.weekly-schedule,
+.schedule-page-header {
+    width: min(100%, 1564px);
 }
 
 /* Encabezados y tarjetas genéricas */
