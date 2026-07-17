@@ -91,6 +91,14 @@ class AuditViewTests(TestCase):
             response,
             "Campaña auditoría",
         )
+        self.assertContains(
+            response,
+            "Lunes: Cerrado",
+        )
+        self.assertContains(
+            response,
+            "08:00 a. m. - 12:00 p. m.",
+        )
 
     def test_superuser_can_see_audit_detail(self):
         self.client.force_login(self.superuser)

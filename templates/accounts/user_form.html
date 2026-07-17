@@ -197,7 +197,12 @@
                 data-client-preview
             >
                 <strong>
-                    Call centers disponibles
+                    {% if selected_client %}
+                        Este usuario puede gestionar:
+                        {{ client_callcenters|length }} call centers
+                    {% else %}
+                        Call centers disponibles
+                    {% endif %}
                 </strong>
 
                 <p class="field-help">

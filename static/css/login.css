@@ -94,3 +94,7 @@
     color: #9d2424;
     font-size: 14px;
 }
+
+.form-error p {
+    margin: 0;
+}

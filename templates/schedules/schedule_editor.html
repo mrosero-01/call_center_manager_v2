@@ -93,6 +93,17 @@ Siptic Manager
     </div>
 {% endif %}
 
+{% if save_feedback %}
+    <div
+        class="schedule-toast"
+        data-schedule-toast
+        role="status"
+        aria-live="polite"
+    >
+        {{ save_feedback }}
+    </div>
+{% endif %}
+
 
 <form
     method="post"

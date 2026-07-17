@@ -986,6 +986,31 @@
     padding-left: 20px;
 }
 
+.schedule-toast {
+    position: fixed;
+    right: 32px;
+    bottom: 78px;
+    z-index: 90;
+    max-width: min(420px, calc(100vw - 48px));
+    padding: 12px 14px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: var(--success-text);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+    font-size: 14px;
+    font-weight: 800;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 0.22s ease,
+        transform 0.22s ease;
+}
+
+.schedule-toast.is-hiding {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
 /* Barra inferior */
 
 .form-actions {

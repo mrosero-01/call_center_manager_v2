@@ -168,6 +168,16 @@
     font-size: 12px;
 }
 
+.audit-table td .audit-change-summary {
+    width: fit-content;
+    margin-top: 8px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 800;
+}
+
 .audit-detail-link {
     min-height: 34px;
     border: 1px solid var(--accent-border);

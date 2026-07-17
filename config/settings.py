@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-import os 
+import os
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -201,3 +201,104 @@ CSRF_COOKIE_SECURE = env_bool(
     "DJANGO_CSRF_COOKIE_SECURE",
     not DEBUG,
 )
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = os.environ.get(
+    "DJANGO_SESSION_COOKIE_SAMESITE",
+    "Lax",
+)
+CSRF_COOKIE_SAMESITE = os.environ.get(
+    "DJANGO_CSRF_COOKIE_SAMESITE",
+    "Lax",
+)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+
+if env_bool("DJANGO_USE_X_FORWARDED_PROTO", False):
+    SECURE_PROXY_SSL_HEADER = (
+        "HTTP_X_FORWARDED_PROTO",
+        "https",
+    )
+
+TRUST_X_FORWARDED_FOR = env_bool(
+    "DJANGO_TRUST_X_FORWARDED_FOR",
+    False,
+)
+
+
+# Logging
+
+LOG_LEVEL = os.environ.get(
+    "DJANGO_LOG_LEVEL",
+    "INFO",
+)
+LOG_HANDLERS = [
+    "console",
+]
+
+LOGGING_HANDLERS = {
+    "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "standard",
+    },
+}
+
+if env_bool("DJANGO_LOG_TO_FILE", False):
+    LOG_DIR = BASE_DIR / "logs"
+    LOG_DIR.mkdir(
+        exist_ok=True,
+    )
+    LOGGING_HANDLERS["file"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": LOG_DIR / "siptic-manager.log",
+        "maxBytes": 1024 * 1024 * 5,
+        "backupCount": 5,
+        "formatter": "standard",
+    }
+    LOG_HANDLERS.append("file")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": (
+                "%(asctime)s %(levelname)s "
+                "%(name)s %(message)s"
+            ),
+        },
+    },
+    "handlers": LOGGING_HANDLERS,
+    "loggers": {
+        "django": {
+            "handlers": LOG_HANDLERS,
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": LOG_HANDLERS,
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "accounts": {
+            "handlers": LOG_HANDLERS,
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "audit": {
+            "handlers": LOG_HANDLERS,
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "callcenters": {
+            "handlers": LOG_HANDLERS,
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "schedules": {
+            "handlers": LOG_HANDLERS,
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}

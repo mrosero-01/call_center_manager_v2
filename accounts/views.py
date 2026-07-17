@@ -1,21 +1,14 @@
 from django.contrib.auth import views as auth_views
 from django.core.cache import cache
 
+from config.request_utils import get_client_ip
+
 LOGIN_RATE_LIMIT = 5
 LOGIN_RATE_WINDOW_SECONDS = 300
 
 
-def _get_client_ip(request):
-    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-
-    return request.META.get("REMOTE_ADDR", "unknown")
-
-
 def _login_rate_key(request):
-    return f"login-rate:{_get_client_ip(request)}"
+    return f"login-rate:{get_client_ip(request)}"
 
 
 class RateLimitedLoginView(auth_views.LoginView):
@@ -54,8 +47,11 @@ class RateLimitedLoginView(auth_views.LoginView):
                         "Espera unos minutos e inténtalo de nuevo."
                     ),
                 )
+                form.rate_limited = True
 
-                return self.form_invalid(form)
+                return self.render_to_response(
+                    self.get_context_data(form=form),
+                )
 
         return super().dispatch(
             request,

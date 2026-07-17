@@ -1,0 +1,59 @@
+.error-page {
+    min-height: 100vh;
+    background: var(--background);
+}
+
+.error-shell {
+    min-height: 100vh;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+}
+
+.error-card {
+    width: min(100%, 520px);
+    padding: 32px;
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--card-shadow);
+}
+
+.error-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.error-card h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.18;
+}
+
+.error-card p:not(.page-eyebrow) {
+    margin: 12px 0 24px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.error-action {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 9px;
+    background: var(--accent);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+}
+
+.error-action:hover {
+    background: var(--accent-hover);
+}
+
+.error-action:focus-visible {
+    outline: 3px solid rgba(239, 184, 93, 0.42);
+    outline-offset: 3px;
+}

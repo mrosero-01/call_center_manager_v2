@@ -1,9 +1,9 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
-from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
 from clients.models import Client
@@ -19,7 +19,7 @@ def _forbid_non_superuser(request):
     if request.user.is_superuser:
         return None
 
-    return HttpResponseForbidden(
+    raise PermissionDenied(
         "No tienes permiso para administrar usuarios.",
     )
 

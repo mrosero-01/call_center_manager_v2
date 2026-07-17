@@ -33,17 +33,36 @@
 
         const clientId = clientSelect.value;
         const callcenters = callcentersByClient[clientId] || [];
+        const previewTitle = document.querySelector(
+            "[data-client-preview] > strong"
+        );
 
         listTarget.innerHTML = "";
 
         if (!clientId) {
             const message = document.createElement("p");
 
+            if (previewTitle) {
+                previewTitle.textContent = "Call centers disponibles";
+            }
+
             message.textContent = (
                 "Selecciona un cliente para ver sus call centers."
             );
             listTarget.appendChild(message);
             return;
+        }
+
+        if (previewTitle) {
+            previewTitle.textContent = (
+                "Este usuario puede gestionar: "
+                + callcenters.length
+                + (
+                    callcenters.length === 1
+                        ? " call center"
+                        : " call centers"
+                )
+            );
         }
 
         if (callcenters.length === 0) {

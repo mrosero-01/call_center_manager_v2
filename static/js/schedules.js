@@ -68,6 +68,9 @@ const closeDayTitle = document.querySelector(
 const closeDayDescription = document.querySelector(
     "[data-close-day-description]"
 );
+const scheduleToast = document.querySelector(
+    "[data-schedule-toast]"
+);
 let pendingUnsavedAction = null;
 let pendingClosePanel = null;
 let dialogReturnFocus = null;
@@ -346,9 +349,24 @@ function showCloseDayDialog(panel) {
     }
 
     if (closeDayDescription) {
+        const ranges = getValidPanelRanges(panel);
+        const rangeCount = ranges.length;
+        const rangeText = ranges
+            .map(formatRangeLabel)
+            .join(", ");
+
         closeDayDescription.textContent = (
-            "Este día tiene horarios configurados. "
-            + "¿Deseas marcarlo como cerrado y quitar esos horarios?"
+            rangeCount
+                ? (
+                    `Cerrar este día eliminará ${rangeCount} `
+                    + (
+                        rangeCount === 1
+                            ? "horario"
+                            : "horarios"
+                    )
+                    + ` configurados: ${rangeText}. ¿Deseas continuar?`
+                )
+                : "Este día no tiene horarios configurados. ¿Deseas continuar?"
         );
     }
 
@@ -1620,4 +1638,20 @@ if (initialPanel || firstOpenPanel || firstPanel) {
 
 if (errorSummary) {
     errorSummary.focus();
+}
+
+if (scheduleToast) {
+    window.setTimeout(
+        function () {
+            scheduleToast.classList.add("is-hiding");
+        },
+        4200
+    );
+
+    window.setTimeout(
+        function () {
+            scheduleToast.remove();
+        },
+        4600
+    );
 }

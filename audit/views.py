@@ -2,14 +2,17 @@ from datetime import datetime, time
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from callcenters.models import CallCenter
-from schedules.audit import get_snapshot_days
+from schedules.audit import (
+    get_schedule_change_summary,
+    get_snapshot_days,
+)
 from schedules.models import ScheduleChangeLog
 
 
@@ -40,7 +43,7 @@ def _date_boundary(value, boundary):
 @login_required
 def audit_list(request):
     if not request.user.is_superuser:
-        return HttpResponseForbidden(
+        raise PermissionDenied(
             "No tienes permiso para ver la auditoría.",
         )
 
@@ -102,6 +105,13 @@ def audit_list(request):
     page = paginator.get_page(
         request.GET.get("page"),
     )
+
+    for log in page:
+        log.change_summary = get_schedule_change_summary(
+            log.before_snapshot,
+            log.after_snapshot,
+        )
+
     query_params = request.GET.copy()
     query_params.pop(
         "page",
@@ -132,7 +142,7 @@ def audit_list(request):
 @login_required
 def audit_detail(request, pk):
     if not request.user.is_superuser:
-        return HttpResponseForbidden(
+        raise PermissionDenied(
             "No tienes permiso para ver la auditoría.",
         )
 

@@ -48,8 +48,21 @@
             </div>
 
             {% if form.errors %}
-                <div class="form-error">
-                    Usuario o contraseña incorrectos.
+                <div
+                    class="form-error"
+                    role="alert"
+                >
+                    {% if form.rate_limited %}
+                        {% for error in form.non_field_errors %}
+                            <p>
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    {% else %}
+                        <p>
+                            Usuario o contraseña incorrectos.
+                        </p>
+                    {% endif %}
                 </div>
             {% endif %}
 
