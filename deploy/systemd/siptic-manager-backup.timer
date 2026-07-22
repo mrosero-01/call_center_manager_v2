@@ -1,0 +1,10 @@
+[Unit]
+Description=Respaldo diario de Siptic Manager
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

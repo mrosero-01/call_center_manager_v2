@@ -75,9 +75,7 @@ SCHEDULE_AUDIO_OPTIONS = [
             "Informa que la atención no está disponible "
             "por una falla técnica."
         ),
-        "preview_url": static(
-            "audio/schedules/falla_tecnica.mp3",
-        ),
+        "preview_path": "audio/schedules/falla_tecnica.mp3",
     },
     {
         "key": ScheduleAudio.STAFF_RETRAINING,
@@ -88,9 +86,7 @@ SCHEDULE_AUDIO_OPTIONS = [
             "Informa que la atención está suspendida "
             "por reentrenamiento del personal."
         ),
-        "preview_url": static(
-            "audio/schedules/reentrenamiento_personal.mp3",
-        ),
+        "preview_path": "audio/schedules/reentrenamiento_personal.mp3",
     },
 ]
 
@@ -104,9 +100,10 @@ def _get_audio_options():
     return [
         {
             **option,
+            "preview_url": static(option["preview_path"]),
             "preview_available": bool(
                 finders.find(
-                    f"audio/schedules/{option['key']}.mp3",
+                    option["preview_path"],
                 )
             ),
         }

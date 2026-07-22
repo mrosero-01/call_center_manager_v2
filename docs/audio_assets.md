@@ -39,7 +39,7 @@ migración que crea la vista:
   --role asterisk_schedule_reader
 ```
 
-La función `ODBC_CALLCENTER_STATUS()` y la subrutina de ejemplo están en:
+La función `ODBC_SIPTIC_CALLCENTER_STATUS()` y la subrutina de ejemplo están en:
 
 - `asterisk/func_odbc_callcenter.conf.example`
 - `asterisk/validar_horario.conf.example`

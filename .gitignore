@@ -133,6 +133,10 @@ celerybeat.pid
 
 # Environments
 .env
+deploy/.env.production
+deploy/backups/
+asterisk/.env
+staticfiles/
 *.bk
 .venv
 env/

@@ -61,3 +61,16 @@ deben instalarse en:
 ```
 
 Consulta también `docs/audio_assets.md` y `docs/production_checklist.md`.
+
+## Despliegue
+
+La instalación limpia con Docker, Apache en un puerto dedicado y Asterisk
+existente está documentada paso a paso en `docs/deployment.md`. Los comandos
+principales son:
+
+```bash
+./deploy/scripts/init-env.sh empresa.com 4000
+./deploy/scripts/install.sh
+sudo ./deploy/apache/configure.sh --apply
+sudo ./asterisk/integrate.sh --check
+```

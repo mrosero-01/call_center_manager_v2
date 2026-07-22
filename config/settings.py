@@ -97,6 +97,12 @@ MIDDLEWARE = [
     'config.middleware.SecurityHeadersMiddleware',
 ]
 
+if not DEBUG:
+    MIDDLEWARE.insert(
+        1,
+        "whitenoise.middleware.WhiteNoiseMiddleware",
+    )
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -180,6 +186,19 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
+    },
+}
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(
     os.environ.get("DJANGO_DATA_UPLOAD_MAX_MEMORY_SIZE", str(1024 * 1024))

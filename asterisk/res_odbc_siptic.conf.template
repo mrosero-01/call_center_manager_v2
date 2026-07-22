@@ -1,0 +1,7 @@
+[callcenter_schedules]
+enabled => yes
+dsn => __ODBC_DSN__
+username => __DB_USER__
+password => __DB_PASSWORD__
+pre-connect => yes
+sanitysql => SELECT 1

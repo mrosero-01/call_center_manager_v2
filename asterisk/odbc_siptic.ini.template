@@ -1,0 +1,8 @@
+[__ODBC_DSN__]
+Description=Siptic Manager horarios
+Driver=__ODBC_DRIVER__
+Servername=__DB_HOST__
+Port=__DB_PORT__
+Database=__DB_NAME__
+SSLmode=disable
+ReadOnly=yes

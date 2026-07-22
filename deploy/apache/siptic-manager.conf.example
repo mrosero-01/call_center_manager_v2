@@ -1,0 +1,23 @@
+Listen __PORT__
+
+<VirtualHost *:__PORT__>
+    ServerName __DOMAIN__
+
+    SSLEngine on
+    SSLCertificateFile __CERTIFICATE_FILE__
+    SSLCertificateKeyFile __CERTIFICATE_KEY_FILE__
+
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:__INTERNAL_PORT__/
+    ProxyPassReverse / http://127.0.0.1:__INTERNAL_PORT__/
+
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Port "__PORT__"
+
+    ErrorLog ${APACHE_LOG_DIR}/siptic-manager-error.log
+    CustomLog ${APACHE_LOG_DIR}/siptic-manager-access.log combined
+
+    <Location />
+        Require all granted
+    </Location>
+</VirtualHost>

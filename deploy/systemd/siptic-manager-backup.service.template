@@ -1,0 +1,9 @@
+[Unit]
+Description=Respaldo de PostgreSQL de Siptic Manager
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=__PROJECT_DIR__
+ExecStart=__PROJECT_DIR__/deploy/scripts/backup.sh

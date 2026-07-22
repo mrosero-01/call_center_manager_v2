@@ -1,6 +1,6 @@
-[CALLCENTER_STATUS]
+[SIPTIC_CALLCENTER_STATUS]
 readhandle=callcenter_schedules
 readsql=SELECT CONCAT(CASE WHEN is_enabled THEN '1' ELSE '0' END, '|', CASE WHEN is_open THEN '1' ELSE '0' END, '|', playback_file, '|', timezone) FROM schedules_asterisk_callcenter_status WHERE codename='${SQL_ESC(${ARG1})}'
 minargs=1
 syntax=<codename>
-synopsis=Obtiene estado habilitado, apertura, audio y zona horaria
+synopsis=Siptic Manager: estado habilitado, apertura, audio y zona horaria

@@ -1,0 +1,13 @@
+**/.env
+**/.env.*
+!.env.example
+!.env.development.example
+!deploy/.env.production.example
+.git
+.gitignore
+.venv
+__pycache__
+*.py[cod]
+*.log
+staticfiles
+deploy/backups

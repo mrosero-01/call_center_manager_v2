@@ -1,7 +1,7 @@
-[validar_horario]
+[siptic-validar-horario]
 exten => s,1,NoOp(Validando horario PostgreSQL para ${ARG1})
  same => n,Set(CODENAME=${ARG1})
- same => n,Set(ESTADO=${ODBC_CALLCENTER_STATUS(${CODENAME})})
+ same => n,Set(ESTADO=${ODBC_SIPTIC_CALLCENTER_STATUS(${CODENAME})})
  same => n,GotoIf($["${ESTADO}" = ""]?no_configurado)
  same => n,Set(HABILITADO=${CUT(ESTADO,|,1)})
  same => n,Set(ABIERTO=${CUT(ESTADO,|,2)})

@@ -1,0 +1,71 @@
+name: siptic-manager
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_USER: ${DB_USER}
+      ASTERISK_DB_USER: ${ASTERISK_DB_USER}
+      ASTERISK_DB_PASSWORD: ${ASTERISK_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/010-create-roles.sh:/docker-entrypoint-initdb.d/010-create-roles.sh:ro
+    ports:
+      - "127.0.0.1:${ASTERISK_DB_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_INTERNAL_PORT:-14000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; request=urllib.request.Request('http://127.0.0.1:8000/health/', headers={'X-Forwarded-Proto':'https'}); urllib.request.urlopen(request, timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+  backup:
+    image: postgres:17-alpine
+    profiles: ["manual"]
+    env_file:
+      - .env.production
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    volumes:
+      - ./backups:/backups
+      - ./docker/backup/backup.sh:/usr/local/bin/siptic-backup:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/usr/local/bin/siptic-backup"]
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
