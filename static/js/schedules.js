@@ -29,6 +29,12 @@ const saveChangeCancel = document.querySelector(
 const saveChangeConfirm = document.querySelector(
     "[data-save-change-confirm]"
 );
+const audioSection = document.querySelector("[data-audio-section]");
+const changeTypeInput = document.querySelector("[data-change-type-input]");
+const changeTypeButtons = Array.from(
+    document.querySelectorAll("[data-change-type]")
+);
+const changeTypeError = document.querySelector("[data-change-type-error]");
 const historyDrawer = document.querySelector(
     "[data-history-drawer]"
 );
@@ -335,7 +341,7 @@ function confirmUnsavedDialog() {
 function showCloseDayDialog(panel) {
     if (!closeDayDialog) {
         replacePanelRanges(panel, []);
-        markAsChanged();
+        markAsChanged(panel);
         return;
     }
 
@@ -399,7 +405,7 @@ function confirmCloseDayDialog() {
     }
 
     replacePanelRanges(panel, []);
-    markAsChanged();
+    markAsChanged(panel);
 }
 
 
@@ -412,9 +418,49 @@ function showSaveChangeDialog() {
     saveChangeDialog.hidden = false;
     updateSaveState();
 
-    if (reasonInput) {
+    if (!changeTypeInput || !changeTypeInput.value) {
+        const firstChangeTypeButton = changeTypeButtons[0];
+
+        if (firstChangeTypeButton) {
+            firstChangeTypeButton.focus();
+        }
+    } else if (reasonInput) {
         reasonInput.focus();
     }
+}
+
+
+function isClosureChange() {
+    return Boolean(
+        changeTypeInput
+        && changeTypeInput.value === "cierre"
+    );
+}
+
+
+function setChangeType(value) {
+    if (!changeTypeInput) {
+        return;
+    }
+
+    changeTypeInput.value = value;
+
+    changeTypeButtons.forEach(function (button) {
+        button.setAttribute(
+            "aria-pressed",
+            button.dataset.changeType === value ? "true" : "false"
+        );
+    });
+
+    if (audioSection) {
+        audioSection.hidden = value !== "cierre";
+    }
+
+    if (value !== "cierre") {
+        stopActiveAudio();
+    }
+
+    updateSaveState();
 }
 
 
@@ -520,7 +566,7 @@ function updateAudioValidity() {
     }
 
     firstAudioInput.setCustomValidity(
-        getSelectedAudioInput()
+        !isClosureChange() || getSelectedAudioInput()
             ? ""
             : "Selecciona un mensaje de audio."
     );
@@ -682,7 +728,13 @@ function updateSaveState() {
         reasonInput
         && !reasonInput.value.trim()
     );
+    const changeTypeMissing = (
+        !changeTypeInput
+        || !changeTypeInput.value
+    );
     const audioMissing = (
+        isClosureChange()
+        &&
         audioInputs.length > 0
         && !getSelectedAudioInput()
     );
@@ -718,10 +770,22 @@ function updateSaveState() {
         );
     }
 
+    if (changeTypeError) {
+        changeTypeError.textContent = (
+            hasUnsavedChanges && reasonIsVisible && changeTypeMissing
+                ? "Selecciona si el cambio es de apertura o cierre."
+                : ""
+        );
+    }
+
     if (unsavedIndicator && hasUnsavedChanges) {
         if (hasErrors) {
             unsavedIndicator.textContent = (
                 "Corrige los horarios marcados"
+            );
+        } else if (reasonIsVisible && changeTypeMissing) {
+            unsavedIndicator.textContent = (
+                "Selecciona apertura o cierre"
             );
         } else if (reasonIsVisible && reasonMissing) {
             unsavedIndicator.textContent = (
@@ -747,6 +811,7 @@ function updateSaveState() {
         saveChangeConfirm.disabled = (
             !hasUnsavedChanges
             || hasErrors
+            || changeTypeMissing
             || reasonMissing
             || audioMissing
         );
@@ -754,7 +819,7 @@ function updateSaveState() {
 }
 
 
-function markAsChanged() {
+function markAsChanged(panel = null) {
     hasUnsavedChanges = true;
 
     if (unsavedIndicator) {
@@ -1142,7 +1207,7 @@ function setDayState(panel, state) {
         }
 
         replacePanelRanges(panel, []);
-        markAsChanged();
+        markAsChanged(panel);
         return;
     }
 
@@ -1157,7 +1222,7 @@ function setDayState(panel, state) {
             : [["", ""]]
     );
 
-    markAsChanged();
+    markAsChanged(panel);
     focusLastTimeRow(panel);
 }
 
@@ -1196,7 +1261,7 @@ function addInterval(panel) {
     );
 
     updateEverything();
-    markAsChanged();
+    markAsChanged(panel);
 
     focusLastTimeRow(panel);
 }
@@ -1264,7 +1329,16 @@ document.addEventListener(
                 .remove();
 
             updateEverything();
-            markAsChanged();
+            markAsChanged(panel);
+            return;
+        }
+
+        const changeTypeButton = event.target.closest(
+            "[data-change-type]"
+        );
+
+        if (changeTypeButton) {
+            setChangeType(changeTypeButton.dataset.changeType);
             return;
         }
 
@@ -1516,7 +1590,9 @@ if (form) {
                 )
             ) {
                 updateEverything();
-                markAsChanged();
+                markAsChanged(
+                    event.target.closest("[data-day-card]")
+                );
             }
         }
     );
@@ -1542,7 +1618,13 @@ if (form) {
                 reasonInput
                 && !reasonInput.value.trim()
             );
+            const changeTypeMissing = (
+                !changeTypeInput
+                || !changeTypeInput.value
+            );
             const audioMissing = (
+                isClosureChange()
+                &&
                 audioInputs.length > 0
                 && !getSelectedAudioInput()
             );
@@ -1571,6 +1653,19 @@ if (form) {
                         reasonInput.focus();
                         return;
                     }
+                }
+
+                return;
+            }
+
+            if (changeTypeMissing) {
+                event.preventDefault();
+                updateSaveState();
+
+                const firstChangeTypeButton = changeTypeButtons[0];
+
+                if (firstChangeTypeButton) {
+                    firstChangeTypeButton.focus();
                 }
 
                 return;
@@ -1629,6 +1724,10 @@ const initialPanel = initialWeekday
     : null;
 
 updateEverything();
+
+if (changeTypeInput && changeTypeInput.value) {
+    setChangeType(changeTypeInput.value);
+}
 
 if (initialPanel || firstOpenPanel || firstPanel) {
     selectDay(

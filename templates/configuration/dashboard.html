@@ -1,0 +1,78 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Configuración | Siptic Manager{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/configuration.css' %}">{% endblock %}
+
+{% block content %}
+<div class="configuration-page">
+    <header class="configuration-header">
+        <div>
+            <span class="eyebrow">Administración general</span>
+            <h1>Configuración</h1>
+            <p>Administra clientes y sus CallCenters desde un solo lugar.</p>
+        </div>
+    </header>
+
+    {% if messages %}
+        <div class="configuration-messages" aria-live="polite">
+            {% for message in messages %}<p class="configuration-message {{ message.tags }}">{{ message }}</p>{% endfor %}
+        </div>
+    {% endif %}
+
+    <section class="summary-grid" aria-label="Resumen de configuración">
+        <article><span>Clientes</span><strong>{{ clients|length }}</strong><small>{{ active_client_count }} activos</small></article>
+        <article><span>CallCenters</span><strong>{{ callcenters|length }}</strong><small>{{ active_callcenter_count }} activos</small></article>
+    </section>
+
+    <section class="configuration-card clients-section">
+        <div class="card-heading">
+            <div><h2>Clientes</h2><p>Cada usuario normal pertenece a un cliente y puede ver sus CallCenters.</p></div>
+            <a class="section-create-action" href="{% url 'management:client_create' %}"><span aria-hidden="true">＋</span> Crear cliente</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Cliente</th><th>Descripción</th><th>CallCenters</th><th>Usuarios</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <tbody>
+                {% for client in clients %}
+                    <tr>
+                        <td><strong>{{ client.name }}</strong></td>
+                        <td class="description-cell">{{ client.description|default:"Sin descripción" }}</td>
+                        <td>{{ client.callcenters.count }}</td>
+                        <td>{{ client.user_set.count }}</td>
+                        <td><span class="status-pill {% if client.is_active %}is-active{% else %}is-inactive{% endif %}">{% if client.is_active %}Activo{% else %}Inactivo{% endif %}</span></td>
+                        <td><div class="row-actions"><a class="edit-action" href="{% url 'management:client_update' client.pk %}">Editar</a><a class="related-action" href="{% url 'management:callcenter_create' %}?client={{ client.pk }}">＋ Agregar CallCenter</a></div></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="empty-cell">Aún no hay clientes. Crea el primero para comenzar.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="configuration-card callcenters-section">
+        <div class="card-heading">
+            <div><h2>CallCenters</h2><p>Configura su identidad, zona horaria y audio de cierre.</p></div>
+            <a class="section-create-action" href="{% url 'management:callcenter_create' %}"><span aria-hidden="true">＋</span> Crear CallCenter</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>CallCenter</th><th>Cliente</th><th>Código</th><th>Zona horaria</th><th>Audio de cierre</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <tbody>
+                {% for callcenter in callcenters %}
+                    <tr>
+                        <td><strong>{{ callcenter.name }}</strong></td><td>{{ callcenter.client.name }}</td>
+                        <td><code>{{ callcenter.codename }}</code></td><td>{{ callcenter.timezone }}</td><td>{{ callcenter.get_closed_audio_file_display }}</td>
+                        <td><span class="status-pill {% if callcenter.is_active %}is-active{% else %}is-inactive{% endif %}">{% if callcenter.is_active %}Activo{% else %}Inactivo{% endif %}</span></td>
+                        <td><div class="row-actions"><a class="edit-action" href="{% url 'management:callcenter_update' callcenter.pk %}">Editar</a><a class="related-action" href="{% url 'schedules:editor' callcenter.codename %}">Gestionar horario</a></div></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="empty-cell">Aún no hay CallCenters configurados.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

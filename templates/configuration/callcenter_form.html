@@ -1,0 +1,25 @@
+{% extends "layout/base.html" %}
+{% load static %}
+{% block title %}{{ title }} | Siptic Manager{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/configuration.css' %}">{% endblock %}
+{% block content %}
+<div class="configuration-page form-page">
+    <a class="back-link" href="{% url 'management:dashboard' %}">← Volver a configuración</a>
+    <header class="configuration-header"><div><span class="eyebrow">CallCenters</span><h1>{{ title }}</h1><p>Configura los datos usados por los horarios y la integración telefónica.</p></div>{% if callcenter %}<a class="secondary-action" href="{% url 'schedules:editor' callcenter.codename %}">Gestionar horario</a>{% endif %}</header>
+    <form method="post" class="configuration-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="form-grid">
+            <div class="form-field"><label for="{{ form.client.id_for_label }}">{{ form.client.label }}</label>{{ form.client }}{{ form.client.errors }}</div>
+            <div class="form-field"><label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>{{ form.name }}{{ form.name.errors }}</div>
+            {% if is_create %}<div class="form-field"><label for="{{ form.codename.id_for_label }}">{{ form.codename.label }}</label>{{ form.codename }}<small>Solo minúsculas, números y guiones bajos. No podrá cambiarse después.</small>{{ form.codename.errors }}</div>{% else %}<div class="form-field"><label>Código de integración</label><div class="readonly-value"><code>{{ callcenter.codename }}</code></div><small>Es estable para no romper la integración con Asterisk.</small></div>{% endif %}
+            <div class="form-field"><label for="{{ form.timezone.id_for_label }}">{{ form.timezone.label }}</label>{{ form.timezone }}{{ form.timezone.errors }}</div>
+            <div class="form-field"><label for="{{ form.closed_audio_file.id_for_label }}">{{ form.closed_audio_file.label }}</label>{{ form.closed_audio_file }}{{ form.closed_audio_file.errors }}</div>
+        </div>
+        <datalist id="timezone-options"><option value="America/Bogota"><option value="America/Lima"><option value="America/Mexico_City"><option value="America/New_York"><option value="UTC"></datalist>
+        <label class="checkbox-field">{{ form.is_active }}<span><strong>{{ form.is_active.label }}</strong><small>Los CallCenters inactivos dejan de aparecer en la operación normal.</small></span></label>
+        <aside class="integration-note"><strong>Integración con Asterisk</strong><p>Crear este registro configura Siptic Manager, pero no crea endpoints PJSIP ni dialplan. El código de integración debe coincidir con el identificador usado en la configuración de Asterisk.</p></aside>
+        <div class="form-actions"><a class="secondary-action" href="{% url 'management:dashboard' %}">Cancelar</a><button class="primary-action" type="submit">{{ submit_label }}</button></div>
+    </form>
+</div>
+{% endblock %}

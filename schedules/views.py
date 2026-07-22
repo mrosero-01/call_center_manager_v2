@@ -1,6 +1,6 @@
 from datetime import datetime
-
 from django.contrib.auth.decorators import login_required
+from django.contrib.staticfiles import finders
 from django.core.cache import cache
 from django.db import transaction
 from django.shortcuts import redirect, render
@@ -8,6 +8,7 @@ from django.templatetags.static import static
 from django.urls import reverse
 
 from callcenters.selectors import get_callcenter_for_user
+from callcenters.models import CallCenter
 
 from .audit import (
     build_schedule_snapshot,
@@ -62,45 +63,33 @@ VALID_WEEKDAYS = set(WEEKDAY_LABELS)
 SAVE_RATE_LIMIT = 10
 SAVE_RATE_WINDOW_SECONDS = 60
 MAX_INTERVALS_PER_DAY = 2
+MAX_CHANGE_REASON_LENGTH = 500
 
 SCHEDULE_AUDIO_OPTIONS = [
     {
-        "key": ScheduleAudio.SCHEDULE_CHANGED,
-        "label": ScheduleAudio.SCHEDULE_CHANGED.label,
-        "title": "Audio 1",
-        "icon": "🔊",
+        "key": ScheduleAudio.TECHNICAL_FAILURE,
+        "label": ScheduleAudio.TECHNICAL_FAILURE.label,
+        "title": "Falla técnica",
+        "icon": "⚠️",
         "description": (
-            "Informa que el horario de atención cambió "
-            "temporalmente."
+            "Informa que la atención no está disponible "
+            "por una falla técnica."
         ),
         "preview_url": static(
-            "audio/schedules/schedule_changed.mp3",
+            "audio/schedules/falla_tecnica.mp3",
         ),
     },
     {
-        "key": ScheduleAudio.TEMPORARILY_UNAVAILABLE,
-        "label": ScheduleAudio.TEMPORARILY_UNAVAILABLE.label,
-        "title": "Audio 2",
-        "icon": "🔇",
+        "key": ScheduleAudio.STAFF_RETRAINING,
+        "label": ScheduleAudio.STAFF_RETRAINING.label,
+        "title": "Reentrenamiento de personal",
+        "icon": "👥",
         "description": (
-            "Indica que la atención no está disponible "
-            "en este momento."
+            "Informa que la atención está suspendida "
+            "por reentrenamiento del personal."
         ),
         "preview_url": static(
-            "audio/schedules/temporarily_unavailable.mp3",
-        ),
-    },
-    {
-        "key": ScheduleAudio.SPECIAL_DAY,
-        "label": ScheduleAudio.SPECIAL_DAY.label,
-        "title": "Audio 3",
-        "icon": "📅",
-        "description": (
-            "Aviso para fechas especiales o eventos "
-            "operativos."
-        ),
-        "preview_url": static(
-            "audio/schedules/special_day.mp3",
+            "audio/schedules/reentrenamiento_personal.mp3",
         ),
     },
 ]
@@ -109,6 +98,20 @@ SCHEDULE_AUDIO_LABELS = {
     option["key"]: option["label"]
     for option in SCHEDULE_AUDIO_OPTIONS
 }
+
+
+def _get_audio_options():
+    return [
+        {
+            **option,
+            "preview_available": bool(
+                finders.find(
+                    f"audio/schedules/{option['key']}.mp3",
+                )
+            ),
+        }
+        for option in SCHEDULE_AUDIO_OPTIONS
+    ]
 
 
 def _get_selected_weekday(value):
@@ -472,11 +475,24 @@ def schedule_editor(request, codename):
         selected_weekday = _get_selected_weekday(
             request.POST.get("selected_weekday"),
         )
+        change_type = request.POST.get(
+            "change_type",
+            "",
+        ).strip()
         change_reason = request.POST.get(
             "change_reason",
             "",
         ).strip()
-        audio_file = _get_audio_file(
+        submitted_version_raw = request.POST.get(
+            "schedule_version",
+            "",
+        )
+
+        try:
+            submitted_version = int(submitted_version_raw)
+        except (TypeError, ValueError):
+            submitted_version = None
+        requested_audio_file = _get_audio_file(
             request.POST.get("audio_file")
             or request.POST.get("audio_key"),
         )
@@ -487,6 +503,11 @@ def schedule_editor(request, codename):
             errors,
         ) = _parse_schedule_post(
             request.POST,
+        )
+        audio_file = (
+            requested_audio_file
+            if change_type == "cierre"
+            else callcenter.closed_audio_file
         )
 
         if _is_schedule_save_rate_limited(
@@ -505,7 +526,25 @@ def schedule_editor(request, codename):
                 "Escribe el motivo del cambio."
             )
 
-        if not audio_file:
+        if len(change_reason) > MAX_CHANGE_REASON_LENGTH:
+            errors.append(
+                "El motivo no puede superar los 500 caracteres."
+            )
+
+        if submitted_version is None:
+            errors.append(
+                "La versión del horario no es válida. Recarga la página."
+            )
+
+        if change_type not in {
+            "apertura",
+            "cierre",
+        }:
+            errors.append(
+                "Selecciona si el cambio es de apertura o cierre."
+            )
+
+        if change_type == "cierre" and not audio_file:
             errors.append(
                 "Selecciona el mensaje de audio que escuchará el cliente."
             )
@@ -528,15 +567,59 @@ def schedule_editor(request, codename):
                     ),
                     "errors": errors,
                     "change_reason": change_reason,
-                    "audio_options": SCHEDULE_AUDIO_OPTIONS,
-                    "selected_audio_file": audio_file,
+                    "audio_options": _get_audio_options(),
+                    "selected_audio_file": (
+                        audio_file
+                        or callcenter.closed_audio_file
+                    ),
                     **_get_change_context(callcenter),
                     "selected_weekday": selected_weekday,
+                    "change_type": change_type,
                     "save_feedback": "",
+                    "schedule_version": (
+                        submitted_version_raw
+                        or callcenter.schedule_version
+                    ),
                 },
             )
 
         with transaction.atomic():
+            locked_callcenter = (
+                CallCenter.objects
+                .select_for_update()
+                .get(pk=callcenter.pk)
+            )
+
+            if submitted_version != locked_callcenter.schedule_version:
+                weekly_sections = _build_weekly_sections(raw_rows)
+                return render(
+                    request,
+                    "schedules/schedule_editor.html",
+                    {
+                        "callcenter": locked_callcenter,
+                        "weekly_sections": weekly_sections,
+                        "schedule_summary": _build_schedule_summary(
+                            weekly_sections,
+                        ),
+                        "errors": [
+                            (
+                                "El horario fue modificado por otro usuario. "
+                                "Recarga la página antes de volver a guardar."
+                            )
+                        ],
+                        "change_reason": change_reason,
+                        "audio_options": _get_audio_options(),
+                        "selected_audio_file": audio_file,
+                        **_get_change_context(locked_callcenter),
+                        "selected_weekday": selected_weekday,
+                        "change_type": change_type,
+                        "save_feedback": "",
+                        "schedule_version": submitted_version_raw,
+                    },
+                    status=409,
+                )
+
+            callcenter = locked_callcenter
             before_snapshot = build_schedule_snapshot(
                 callcenter,
             )
@@ -569,7 +652,10 @@ def schedule_editor(request, codename):
                 ),
             )
 
-            if proposed_rows == current_rows:
+            schedule_changed = proposed_rows != current_rows
+            audio_changed = callcenter.closed_audio_file != audio_file
+
+            if not schedule_changed and not audio_changed:
                 editor_url = reverse(
                     "schedules:editor",
                     kwargs={
@@ -581,21 +667,34 @@ def schedule_editor(request, codename):
                     f"{editor_url}?day={selected_weekday}&saved=unchanged",
                 )
 
-            ScheduleInterval.objects.filter(
-                callcenter=callcenter,
-            ).delete()
+            if schedule_changed:
+                ScheduleInterval.objects.filter(
+                    callcenter=callcenter,
+                ).delete()
 
-            ScheduleInterval.objects.bulk_create(
-                [
-                    ScheduleInterval(
-                        callcenter=callcenter,
-                        weekday=interval["weekday"],
-                        start_time=interval["start_time"],
-                        end_time=interval["end_time"],
-                    )
-                    for interval in intervals
-                ]
-            )
+                ScheduleInterval.objects.bulk_create(
+                    [
+                        ScheduleInterval(
+                            callcenter=callcenter,
+                            weekday=interval["weekday"],
+                            start_time=interval["start_time"],
+                            end_time=interval["end_time"],
+                        )
+                        for interval in intervals
+                    ]
+                )
+
+            callcenter.schedule_version += 1
+            update_fields = [
+                "schedule_version",
+                "updated_at",
+            ]
+
+            if audio_changed:
+                callcenter.closed_audio_file = audio_file
+                update_fields.append("closed_audio_file")
+
+            callcenter.save(update_fields=update_fields)
 
             after_snapshot = build_schedule_snapshot(
                 callcenter,
@@ -614,6 +713,7 @@ def schedule_editor(request, codename):
                 ),
                 request=request,
             )
+
 
         editor_url = reverse(
             "schedules:editor",
@@ -660,10 +760,12 @@ def schedule_editor(request, codename):
             ),
             "errors": [],
             "change_reason": "",
-            "audio_options": SCHEDULE_AUDIO_OPTIONS,
-            "selected_audio_file": "",
+            "audio_options": _get_audio_options(),
+            "selected_audio_file": callcenter.closed_audio_file,
             **_get_change_context(callcenter),
             "selected_weekday": selected_weekday,
+            "change_type": "",
             "save_feedback": save_feedback,
+            "schedule_version": callcenter.schedule_version,
         },
     )

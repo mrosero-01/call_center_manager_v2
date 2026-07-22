@@ -29,6 +29,7 @@
 .audit-meta-card,
 .audit-summary-card,
 .snapshot-card {
+    border: 1px solid rgba(223, 227, 238, 0.72);
     border-radius: 14px;
     background: #ffffff;
     box-shadow: var(--card-shadow);
@@ -151,9 +152,19 @@
 }
 
 .audit-table th {
+    background: #fbfcfe;
     color: var(--text-secondary);
     font-size: 12px;
     text-transform: uppercase;
+}
+
+.audit-table tbody tr:hover {
+    background: #fafbfe;
+}
+
+.audit-table td:nth-child(4) {
+    max-width: 460px;
+    overflow-wrap: anywhere;
 }
 
 .audit-table td {
@@ -320,6 +331,7 @@
     color: var(--text-primary);
     font-size: 16px;
     line-height: 1.55;
+    overflow-wrap: anywhere;
 }
 
 .audit-card-title-row {

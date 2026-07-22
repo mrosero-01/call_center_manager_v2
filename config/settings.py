@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.utils.csp import CSP
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -52,7 +53,7 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool(
     "DJANGO_DEBUG",
-    True,
+    False,
 )
 
 ALLOWED_HOSTS = env_list(
@@ -86,12 +87,14 @@ AUTH_USER_MODEL = "accounts.User"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.csp.ContentSecurityPolicyMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'config.middleware.SecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -125,6 +128,13 @@ DATABASES = {
         "PASSWORD": os.environ["DB_PASSWORD"],
         "HOST": os.environ["DB_HOST"],
         "PORT": os.environ["DB_PORT"],
+        "CONN_MAX_AGE": int(
+            os.environ.get("DB_CONN_MAX_AGE", "60")
+        ),
+        "CONN_HEALTH_CHECKS": True,
+        "TEST": {
+            "NAME": os.environ.get("DB_TEST_NAME") or None,
+        },
     }
 }
 
@@ -171,13 +181,25 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.environ.get("DJANGO_DATA_UPLOAD_MAX_MEMORY_SIZE", str(1024 * 1024))
+)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(
+    os.environ.get("DJANGO_DATA_UPLOAD_MAX_NUMBER_FIELDS", "100")
+)
+
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "callcenters:list"
 LOGOUT_REDIRECT_URL = "login"
 
+ENABLE_DJANGO_ADMIN = env_bool(
+    "DJANGO_ENABLE_ADMIN",
+    False,
+)
+
 SECURE_SSL_REDIRECT = env_bool(
     "DJANGO_SECURE_SSL_REDIRECT",
-    False,
+    not DEBUG,
 )
 SECURE_HSTS_SECONDS = int(
     os.environ.get(
@@ -203,6 +225,14 @@ CSRF_COOKIE_SECURE = env_bool(
 )
 
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = int(
+    os.environ.get("DJANGO_SESSION_COOKIE_AGE", "28800")
+)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = env_bool(
+    "DJANGO_SESSION_EXPIRE_AT_BROWSER_CLOSE",
+    True,
+)
+SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_SAMESITE = os.environ.get(
     "DJANGO_SESSION_COOKIE_SAMESITE",
     "Lax",
@@ -212,7 +242,23 @@ CSRF_COOKIE_SAMESITE = os.environ.get(
     "Lax",
 )
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
 X_FRAME_OPTIONS = "DENY"
+
+SECURE_CSP = {
+    "default-src": [CSP.SELF],
+    "base-uri": [CSP.SELF],
+    "connect-src": [CSP.SELF],
+    "font-src": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+    "img-src": [CSP.SELF, "data:"],
+    "media-src": [CSP.SELF],
+    "object-src": [CSP.NONE],
+    "script-src": [CSP.SELF],
+    "style-src": [CSP.SELF],
+}
 
 if env_bool("DJANGO_USE_X_FORWARDED_PROTO", False):
     SECURE_PROXY_SSL_HEADER = (

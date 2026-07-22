@@ -54,8 +54,8 @@ class AuditViewTests(TestCase):
             reason="Capacitación del personal",
             before_snapshot=self.before_snapshot,
             after_snapshot=self.after_snapshot,
-            audio_file="schedule_changed",
-            audio_label="Horario modificado",
+            audio_file="falla_tecnica",
+            audio_label="Falla técnica",
             ip_address="127.0.0.20",
             user_agent="Audit test browser",
         )

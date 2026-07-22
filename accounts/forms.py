@@ -51,9 +51,9 @@ class ManagedUserCreateForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["client"].queryset = Client.objects.order_by(
-            "name",
-        )
+        self.fields["client"].queryset = Client.objects.filter(
+            is_active=True,
+        ).order_by("name")
         self.fields["username"].widget.attrs.update(
             {
                 "autocomplete": "username",
@@ -143,9 +143,9 @@ class ManagedUserUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["client"].queryset = Client.objects.order_by(
-            "name",
-        )
+        self.fields["client"].queryset = Client.objects.filter(
+            is_active=True,
+        ).order_by("name")
         self.fields["username"].widget.attrs.update(
             {
                 "autocomplete": "username",

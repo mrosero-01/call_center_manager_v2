@@ -10,6 +10,7 @@ class CallCenterAdmin(admin.ModelAdmin):
         "codename",
         "client",
         "timezone",
+        "closed_audio_file",
         "is_active",
     )
 

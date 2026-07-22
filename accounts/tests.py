@@ -42,6 +42,37 @@ class RootRedirectTests(TestCase):
             reverse("callcenters:list"),
         )
 
+    def test_security_headers_are_present(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("callcenters:list"))
+
+        self.assertIn("Content-Security-Policy", response.headers)
+        self.assertEqual(
+            response.headers["X-Frame-Options"],
+            "DENY",
+        )
+        self.assertIn(
+            "camera=()",
+            response.headers["Permissions-Policy"],
+        )
+        self.assertEqual(
+            response.headers["Referrer-Policy"],
+            "same-origin",
+        )
+
+    def test_django_admin_is_disabled_by_default(self):
+        response = self.client.get("/admin/login/")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_healthcheck_reports_database_ready(self):
+        response = self.client.get(reverse("healthcheck"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+        self.assertEqual(response.headers["Cache-Control"], "max-age=0, no-cache, no-store, must-revalidate, private")
+
 
 class LoginRateLimitTests(TestCase):
     def setUp(self):
@@ -68,10 +99,30 @@ class LoginRateLimitTests(TestCase):
             },
         )
 
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.headers["Retry-After"], "300")
         self.assertContains(
             response,
             "Demasiados intentos de inicio de sesión",
+            status_code=429,
         )
+
+    def test_username_limit_combines_attempts_from_different_ips(self):
+        for index in range(10):
+            response = self.client.post(
+                self.url,
+                {"username": "target", "password": "bad-password"},
+                REMOTE_ADDR=f"192.0.2.{index + 1}",
+            )
+            self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            self.url,
+            {"username": "TARGET", "password": "bad-password"},
+            REMOTE_ADDR="192.0.2.200",
+        )
+
+        self.assertEqual(response.status_code, 429)
 
 
 class UserManagementTests(TestCase):
@@ -118,9 +169,9 @@ class UserManagementTests(TestCase):
             response,
             self.normal_user.username,
         )
-        self.assertNotContains(
-            response,
-            self.superuser.username,
+        self.assertNotIn(
+            self.superuser,
+            response.context["users"].object_list,
         )
 
     def test_superuser_can_view_create_user_page(self):

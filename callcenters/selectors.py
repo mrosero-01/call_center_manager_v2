@@ -18,6 +18,8 @@ def get_callcenters_for_user(user):
 
     return queryset.filter(
         client_id=user.client_id,
+        client__is_active=True,
+        is_active=True,
     )
 
 

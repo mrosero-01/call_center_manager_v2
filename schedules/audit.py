@@ -108,12 +108,13 @@ def build_schedule_snapshot(callcenter):
         "version": 1,
         "codename": callcenter.codename,
         "timezone": callcenter.timezone,
+        "closed_audio_file": callcenter.closed_audio_file,
         "days": days,
     }
 
 
 def get_user_agent(request):
-    return request.META.get("HTTP_USER_AGENT", "")
+    return request.META.get("HTTP_USER_AGENT", "")[:512]
 
 
 def create_schedule_change_log(

@@ -1,12 +1,11 @@
 # Audios de horarios
 
-El sistema usa tres audios asociados a cambios/cierres operativos:
+El sistema usa dos audios asociados a cierres operativos:
 
 | Clave | Web MP3 | Asterisk WAV |
 | --- | --- | --- |
-| `schedule_changed` | `static/audio/schedules/schedule_changed.mp3` | `asterisk/sounds/callcenter_manager/schedule_changed.wav` |
-| `temporarily_unavailable` | `static/audio/schedules/temporarily_unavailable.mp3` | `asterisk/sounds/callcenter_manager/temporarily_unavailable.wav` |
-| `special_day` | `static/audio/schedules/special_day.mp3` | `asterisk/sounds/callcenter_manager/special_day.wav` |
+| `falla_tecnica` | `static/audio/schedules/falla_tecnica.mp3` | `asterisk/sounds/callcenter_manager/falla_tecnica.wav` |
+| `reentrenamiento_personal` | `static/audio/schedules/reentrenamiento_personal.mp3` | `asterisk/sounds/callcenter_manager/reentrenamiento_personal.wav` |
 
 ## Flujo recomendado
 
@@ -21,3 +20,36 @@ El sistema usa tres audios asociados a cambios/cierres operativos:
 La plataforma ya puede guardar la clave del audio seleccionado en el historial.
 La conexión efectiva con Asterisk debe verificarse contra el dialplan real antes
 de prometer que el audio elegido se reproducirá en llamada.
+
+## Integración activa
+
+El audio vigente se guarda en `CallCenter.closed_audio_file`. La vista
+`schedules_asterisk_callcenter_status` entrega en una sola consulta:
+
+- Si cliente y CallCenter están habilitados.
+- Si está abierto según su horario y zona horaria.
+- La ruta del audio de cierre.
+- La zona horaria aplicada.
+
+El usuario PostgreSQL de Asterisk necesita este permiso después de aplicar la
+migración que crea la vista:
+
+```bash
+.venv/bin/python manage.py grant_asterisk_access \
+  --role asterisk_schedule_reader
+```
+
+La función `ODBC_CALLCENTER_STATUS()` y la subrutina de ejemplo están en:
+
+- `asterisk/func_odbc_callcenter.conf.example`
+- `asterisk/validar_horario.conf.example`
+
+Los archivos finales se instalan, sin extensión en la instrucción `Playback`,
+bajo:
+
+```text
+/var/lib/asterisk/sounds/custom/callcenter_manager/
+```
+
+Si el archivo configurado no existe como WAV o GSM, el dialplan usa
+`vm-goodbye` como respaldo.

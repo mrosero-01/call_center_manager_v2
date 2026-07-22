@@ -1,5 +1,9 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.db import connection
 from django.test import TestCase
 from django.urls import reverse
 
@@ -44,8 +48,14 @@ class ScheduleEditorTests(TestCase):
         starts,
         ends,
         reason,
-        audio_file=ScheduleAudio.SCHEDULE_CHANGED,
+        audio_file=ScheduleAudio.TECHNICAL_FAILURE,
+        change_type="apertura",
+        schedule_version=None,
     ):
+        if schedule_version is None:
+            self.callcenter.refresh_from_db()
+            schedule_version = self.callcenter.schedule_version
+
         return self.client.post(
             self.url,
             {
@@ -54,6 +64,8 @@ class ScheduleEditorTests(TestCase):
                 "end_time": ends,
                 "change_reason": reason,
                 "audio_file": audio_file,
+                "change_type": change_type,
+                "schedule_version": schedule_version,
             },
             REMOTE_ADDR="127.0.0.10",
             HTTP_USER_AGENT="Schedule test browser",
@@ -76,18 +88,14 @@ class ScheduleEditorTests(TestCase):
             ScheduleInterval.objects.count(),
             0,
         )
-        self.assertEqual(
-            ScheduleChangeLog.objects.count(),
-            0,
-        )
-
     def test_requires_audio_reference(self):
         response = self.post_schedule(
-            [Weekday.MONDAY],
-            ["08:00"],
-            ["12:00"],
+            [],
+            [],
+            [],
             "Ajuste operativo",
             audio_file="",
+            change_type="cierre",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -102,6 +110,37 @@ class ScheduleEditorTests(TestCase):
         self.assertEqual(
             ScheduleChangeLog.objects.count(),
             0,
+        )
+
+    def test_requires_change_type(self):
+        response = self.post_schedule(
+            [Weekday.MONDAY],
+            ["08:00"],
+            ["12:00"],
+            "Ajuste operativo",
+            change_type="",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Selecciona si el cambio es de apertura o cierre.",
+        )
+        self.assertEqual(ScheduleInterval.objects.count(), 0)
+
+    def test_audio_radios_do_not_use_hidden_native_required_validation(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            'name="audio_file"',
+            count=2,
+        )
+        self.assertContains(response, 'value="falla_tecnica"')
+        self.assertContains(response, 'value="reentrenamiento_personal"')
+        self.assertNotContains(
+            response,
+            'value="falla_tecnica"\n                                required',
         )
 
     def test_rejects_more_than_two_intervals_per_day(self):
@@ -208,6 +247,22 @@ class ScheduleEditorTests(TestCase):
             404,
         )
 
+    def test_user_cannot_edit_inactive_callcenter(self):
+        self.callcenter.is_active = False
+        self.callcenter.save(update_fields=["is_active"])
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_user_cannot_edit_callcenter_when_client_is_inactive(self):
+        self.client_account.is_active = False
+        self.client_account.save(update_fields=["is_active"])
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_schedule_save_rate_limit(self):
         for index in range(10):
             response = self.post_schedule(
@@ -241,6 +296,49 @@ class ScheduleEditorTests(TestCase):
             ScheduleChangeLog.objects.count(),
             10,
         )
+
+    def test_rejects_stale_schedule_version(self):
+        stale_version = self.callcenter.schedule_version
+        first_response = self.post_schedule(
+            [Weekday.MONDAY],
+            ["08:00"],
+            ["12:00"],
+            "Primer cambio",
+            schedule_version=stale_version,
+        )
+        self.assertEqual(first_response.status_code, 302)
+
+        response = self.post_schedule(
+            [Weekday.TUESDAY],
+            ["09:00"],
+            ["13:00"],
+            "Cambio desde una pantalla desactualizada",
+            schedule_version=stale_version,
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertContains(
+            response,
+            "modificado por otro usuario",
+            status_code=409,
+        )
+        self.assertFalse(
+            ScheduleInterval.objects.filter(
+                weekday=Weekday.TUESDAY,
+            ).exists()
+        )
+
+    def test_rejects_change_reason_over_500_characters(self):
+        response = self.post_schedule(
+            [Weekday.MONDAY],
+            ["08:00"],
+            ["12:00"],
+            "x" * 501,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "no puede superar los 500")
+        self.assertEqual(ScheduleChangeLog.objects.count(), 0)
 
     def test_rejects_overlapping_intervals(self):
         response = self.post_schedule(
@@ -284,7 +382,7 @@ class ScheduleEditorTests(TestCase):
                 "18:00",
             ],
             "Cambio por capacitación",
-            audio_file=ScheduleAudio.SPECIAL_DAY,
+            audio_file=ScheduleAudio.STAFF_RETRAINING,
         )
 
         self.assertEqual(response.status_code, 302)
@@ -309,11 +407,16 @@ class ScheduleEditorTests(TestCase):
         )
         self.assertEqual(
             change_log.audio_file,
-            ScheduleAudio.SPECIAL_DAY,
+            ScheduleAudio.TECHNICAL_FAILURE,
         )
         self.assertEqual(
             change_log.audio_label,
-            ScheduleAudio.SPECIAL_DAY.label,
+            ScheduleAudio.TECHNICAL_FAILURE.label,
+        )
+        self.callcenter.refresh_from_db()
+        self.assertEqual(
+            self.callcenter.closed_audio_file,
+            ScheduleAudio.TECHNICAL_FAILURE,
         )
         self.assertEqual(
             change_log.before_snapshot["codename"],
@@ -372,3 +475,103 @@ class ScheduleEditorTests(TestCase):
             ScheduleChangeLog.objects.count(),
             1,
         )
+
+    def test_closing_day_updates_current_audio_configuration(self):
+        ScheduleInterval.objects.create(
+            callcenter=self.callcenter,
+            weekday=Weekday.FRIDAY,
+            start_time="08:00",
+            end_time="12:00",
+        )
+
+        response = self.post_schedule(
+            [],
+            [],
+            [],
+            "Cierre por reentrenamiento",
+            audio_file=ScheduleAudio.STAFF_RETRAINING,
+            change_type="cierre",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.callcenter.refresh_from_db()
+        self.assertEqual(
+            self.callcenter.closed_audio_file,
+            ScheduleAudio.STAFF_RETRAINING,
+        )
+        self.assertEqual(
+            ScheduleChangeLog.objects.count(),
+            1,
+        )
+
+    def test_opening_day_ignores_submitted_audio_change(self):
+        response = self.post_schedule(
+            [Weekday.TUESDAY],
+            ["08:00"],
+            ["12:00"],
+            "Apertura por operación normal",
+            audio_file=ScheduleAudio.STAFF_RETRAINING,
+            change_type="apertura",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.callcenter.refresh_from_db()
+        self.assertEqual(
+            self.callcenter.closed_audio_file,
+            ScheduleAudio.TECHNICAL_FAILURE,
+        )
+
+
+class AsteriskStatusViewTests(TestCase):
+    def setUp(self):
+        self.client_account = Client.objects.create(
+            name="Cliente estado Asterisk",
+        )
+        self.callcenter = CallCenter.objects.create(
+            client=self.client_account,
+            name="Centro estado Asterisk",
+            codename="estado_asterisk",
+            timezone="America/Bogota",
+            closed_audio_file=ScheduleAudio.STAFF_RETRAINING,
+        )
+        weekday = list(Weekday.values)[
+            datetime.now(ZoneInfo("America/Bogota")).weekday()
+        ]
+        ScheduleInterval.objects.create(
+            callcenter=self.callcenter,
+            weekday=weekday,
+            start_time="00:00",
+            end_time="23:59",
+        )
+
+    def get_status(self):
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT is_enabled, is_open, playback_file, timezone
+                FROM schedules_asterisk_callcenter_status
+                WHERE codename = %s
+                """,
+                [self.callcenter.codename],
+            )
+            return cursor.fetchone()
+
+    def test_view_calculates_complete_asterisk_status(self):
+        enabled, is_open, audio, timezone_name = self.get_status()
+
+        self.assertTrue(enabled)
+        self.assertTrue(is_open)
+        self.assertEqual(
+            audio,
+            "custom/callcenter_manager/reentrenamiento_personal",
+        )
+        self.assertEqual(timezone_name, "America/Bogota")
+
+    def test_inactive_client_disables_callcenter_for_asterisk(self):
+        self.client_account.is_active = False
+        self.client_account.save(update_fields=["is_active"])
+
+        enabled, is_open, _audio, _timezone = self.get_status()
+
+        self.assertFalse(enabled)
+        self.assertFalse(is_open)

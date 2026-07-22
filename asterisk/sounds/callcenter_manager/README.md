@@ -5,9 +5,8 @@ que se previsualizan en la plataforma.
 
 Nombres lógicos:
 
-- `schedule_changed`
-- `temporarily_unavailable`
-- `special_day`
+- `falla_tecnica`
+- `reentrenamiento_personal`
 
 Formato recomendado para compatibilidad:
 
@@ -18,9 +17,8 @@ Formato recomendado para compatibilidad:
 Ejemplo de conversión desde MP3:
 
 ```bash
-ffmpeg -i static/audio/schedules/schedule_changed.mp3 -ar 8000 -ac 1 -sample_fmt s16 asterisk/sounds/callcenter_manager/schedule_changed.wav
-ffmpeg -i static/audio/schedules/temporarily_unavailable.mp3 -ar 8000 -ac 1 -sample_fmt s16 asterisk/sounds/callcenter_manager/temporarily_unavailable.wav
-ffmpeg -i static/audio/schedules/special_day.mp3 -ar 8000 -ac 1 -sample_fmt s16 asterisk/sounds/callcenter_manager/special_day.wav
+sox static/audio/schedules/falla_tecnica.mp3 -r 8000 -c 1 -e signed-integer -b 16 asterisk/sounds/callcenter_manager/falla_tecnica.wav
+sox static/audio/schedules/reentrenamiento_personal.mp3 -r 8000 -c 1 -e signed-integer -b 16 asterisk/sounds/callcenter_manager/reentrenamiento_personal.wav
 ```
 
 Para instalar en un servidor Asterisk, copiar los `.wav` al directorio de

@@ -17,6 +17,7 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     background: var(--surface);
+    box-shadow: 0 16px 42px rgba(15, 23, 42, 0.08);
 }
 
 .login-brand {
@@ -70,6 +71,7 @@
 
 .form-field input:focus {
     border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(239, 184, 93, 0.26);
 }
 
 .primary-button {

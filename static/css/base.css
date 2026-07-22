@@ -21,6 +21,7 @@
     --danger-bg: #fff1f2;
     --danger-text: #b42318;
     --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    --card-shadow-hover: 0 8px 22px rgba(15, 23, 42, 0.10);
     --sidebar-width: 260px;
     --radius: 12px;
 }
@@ -44,6 +45,8 @@ body {
     margin: 0;
     background: var(--background);
     color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.45;
 }
 
 button,
@@ -51,6 +54,15 @@ input,
 select,
 textarea {
     font: inherit;
+}
+
+button,
+a {
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease;
 }
 
 a {
@@ -201,7 +213,8 @@ textarea:disabled {
 }
 
 .app-main {
-    padding: 48px;
+    min-width: 0;
+    padding: 40px clamp(24px, 3vw, 48px);
 }
 
 .page-header,
@@ -210,13 +223,14 @@ textarea:disabled {
 .audit-page,
 .weekly-schedule,
 .schedule-page-header {
-    width: min(100%, 1564px);
+    width: min(100%, 1480px);
+    margin-inline: auto;
 }
 
 /* Encabezados y tarjetas genéricas */
 
 .page-header {
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 }
 
 .page-eyebrow {
@@ -233,9 +247,10 @@ textarea:disabled {
 }
 
 .page-description {
-    margin: 12px 0 0;
+    margin: 10px 0 0;
     color: var(--text-secondary);
-    font-size: 16px;
+    font-size: 15px;
+    line-height: 1.5;
 }
 
 .quick-actions {
@@ -292,6 +307,20 @@ textarea:disabled {
         position: static;
         height: auto;
         min-height: auto;
+        padding: 18px 16px;
+    }
+
+    .sidebar-brand {
+        padding-bottom: 18px;
+    }
+
+    .sidebar-nav {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .nav-link {
+        text-align: center;
     }
 
     .sidebar-footer {
@@ -303,6 +332,12 @@ textarea:disabled {
     }
 
     .quick-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    .sidebar-nav {
         grid-template-columns: 1fr;
     }
 }

@@ -52,6 +52,14 @@
 
                 {% if request.user.is_superuser %}
                     <a
+                        href="{% url 'management:dashboard' %}"
+                        class="nav-link {% if request.resolver_match.namespace == 'management' %}is-active{% endif %}"
+                        {% if request.resolver_match.namespace == 'management' %}aria-current="page"{% endif %}
+                    >
+                        Configuración
+                    </a>
+
+                    <a
                         href="{% url 'user_list' %}"
                         class="nav-link {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_update' or request.resolver_match.url_name == 'user_password_update' %}is-active{% endif %}"
                         {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_update' or request.resolver_match.url_name == 'user_password_update' %}aria-current="page"{% endif %}

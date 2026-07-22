@@ -116,6 +116,12 @@ Siptic Manager
 
     <input
         type="hidden"
+        name="schedule_version"
+        value="{{ schedule_version }}"
+    >
+
+    <input
+        type="hidden"
         name="selected_weekday"
         value="{{ selected_weekday }}"
         data-selected-weekday
@@ -369,16 +375,61 @@ Siptic Manager
             aria-labelledby="change-reason-title"
             aria-describedby="change-reason-description"
         >
-            <h2 id="change-reason-title">
+            <h2
+                id="change-reason-title"
+                data-save-dialog-title
+            >
                 Guardar cambios
             </h2>
 
             <p
                 id="change-reason-description"
                 class="save-change-intro"
+                data-save-dialog-description
             >
-                Registra el motivo del cambio antes de actualizar el horario.
+                Indica si el cambio corresponde a una apertura o a un cierre.
             </p>
+
+            <fieldset class="change-type-group">
+                <legend>
+                    Tipo de cambio
+                </legend>
+
+                <input
+                    type="hidden"
+                    name="change_type"
+                    value="{{ change_type }}"
+                    data-change-type-input
+                >
+
+                <div class="change-type-options">
+                    <button
+                        type="button"
+                        class="change-type-button"
+                        data-change-type="apertura"
+                        aria-pressed="{% if change_type == 'apertura' %}true{% else %}false{% endif %}"
+                    >
+                        <strong>Apertura</strong>
+                        <span>Las llamadas serán atendidas o encoladas.</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="change-type-button"
+                        data-change-type="cierre"
+                        aria-pressed="{% if change_type == 'cierre' %}true{% else %}false{% endif %}"
+                    >
+                        <strong>Cierre</strong>
+                        <span>Las llamadas escucharán el audio seleccionado.</span>
+                    </button>
+                </div>
+
+                <p
+                    class="change-type-error"
+                    data-change-type-error
+                    role="alert"
+                ></p>
+            </fieldset>
 
             <div class="change-reason-field">
                 <label
@@ -391,6 +442,7 @@ Siptic Manager
                 <textarea
                     id="change-reason"
                     name="change_reason"
+                    maxlength="500"
                     rows="3"
                     data-change-reason
                     aria-describedby="change-reason-help change-reason-error"
@@ -414,13 +466,15 @@ Siptic Manager
             <fieldset
                 class="audio-choice-group"
                 data-audio-section
+                {% if change_type != 'cierre' %}hidden{% endif %}
             >
                 <legend>
                     Audios de referencia
                 </legend>
 
                 <p class="audio-choice-note">
-                    Elige el mensaje que escuchará el cliente cuando el cambio de horario aplique.
+                    Elige el mensaje de cierre. Asterisk lo reproducirá cuando
+                    el archivo correspondiente esté instalado en la central.
                 </p>
 
                 <div class="audio-choice-list">
@@ -431,7 +485,6 @@ Siptic Manager
                                 type="radio"
                                 name="audio_file"
                                 value="{{ option.key }}"
-                                required
                                 {% if selected_audio_file == option.key %}checked{% endif %}
                             >
 
@@ -462,14 +515,20 @@ Siptic Manager
                                 </span>
                             </label>
 
-                            <button
-                                type="button"
-                                class="audio-preview-button"
-                                data-audio-preview
-                                data-audio-src="{{ option.preview_url }}"
-                            >
-                                Escuchar ejemplo
-                            </button>
+                            {% if option.preview_available %}
+                                <button
+                                    type="button"
+                                    class="audio-preview-button"
+                                    data-audio-preview
+                                    data-audio-src="{{ option.preview_url }}"
+                                >
+                                    Escuchar ejemplo
+                                </button>
+                            {% else %}
+                                <span class="audio-preview-unavailable">
+                                    Vista previa pendiente
+                                </span>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>

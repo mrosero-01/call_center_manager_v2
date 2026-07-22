@@ -14,17 +14,13 @@ class Weekday(models.TextChoices):
 
 
 class ScheduleAudio(models.TextChoices):
-    SCHEDULE_CHANGED = (
-        "schedule_changed",
-        "Horario modificado",
+    TECHNICAL_FAILURE = (
+        "falla_tecnica",
+        "Falla técnica",
     )
-    TEMPORARILY_UNAVAILABLE = (
-        "temporarily_unavailable",
-        "Atención no disponible",
-    )
-    SPECIAL_DAY = (
-        "special_day",
-        "Festivo o evento especial",
+    STAFF_RETRAINING = (
+        "reentrenamiento_personal",
+        "Reentrenamiento de personal",
     )
 
 
@@ -88,7 +84,7 @@ class ScheduleChangeLog(models.Model):
         blank=True,
     )
 
-    reason = models.TextField()
+    reason = models.CharField(max_length=500)
 
     before_snapshot = models.JSONField(
         default=dict,
@@ -114,7 +110,8 @@ class ScheduleChangeLog(models.Model):
         blank=True,
     )
 
-    user_agent = models.TextField(
+    user_agent = models.CharField(
+        max_length=512,
         blank=True,
     )
 
