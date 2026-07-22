@@ -1,0 +1,36 @@
+@page {
+  size: A4;
+  margin: 20mm 17mm 20mm 17mm;
+  @bottom-left { content: "Siptic Manager · Manual de despliegue"; color: #626a7d; font-size: 8pt; }
+  @bottom-right { content: "Página " counter(page) " de " counter(pages); color: #626a7d; font-size: 8pt; }
+}
+@page:first {
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+html { font-family: "DejaVu Sans", sans-serif; color: #171a2c; font-size: 9.6pt; line-height: 1.48; }
+body { margin: 0; }
+h1 { color: #202338; font-size: 22pt; margin: 0 0 12pt; padding-bottom: 5pt; border-bottom: 2px solid #efb85d; page-break-after: avoid; }
+h1:first-of-type { font-size: 34pt; border: 0; margin-top: 55mm; color: #202338; }
+h2 { color: #464d75; font-size: 15pt; margin: 18pt 0 7pt; page-break-after: avoid; }
+h3 { color: #59618f; font-size: 11.5pt; margin: 13pt 0 5pt; page-break-after: avoid; }
+p { margin: 5pt 0 8pt; }
+a { color: #464d75; text-decoration: none; }
+ul, ol { margin: 5pt 0 9pt 18pt; padding: 0; }
+li { margin: 2.5pt 0; }
+blockquote { margin: 10pt 0; padding: 9pt 12pt; border-left: 4px solid #efb85d; background: #fff7e8; color: #543b18; }
+pre { background: #202338; color: #f7f8fb; padding: 9pt; border-radius: 5pt; white-space: pre-wrap; overflow-wrap: anywhere; font-family: "DejaVu Sans Mono", monospace; font-size: 7.6pt; line-height: 1.38; page-break-inside: avoid; }
+code { font-family: "DejaVu Sans Mono", monospace; font-size: .9em; background: #eef0fa; color: #353c68; padding: 1pt 3pt; border-radius: 2pt; }
+pre code { background: transparent; color: inherit; padding: 0; }
+table { width: 100%; border-collapse: collapse; margin: 8pt 0 12pt; font-size: 8.5pt; }
+thead { display: table-header-group; }
+tr { page-break-inside: avoid; }
+th { background: #59618f; color: white; text-align: left; padding: 6pt; }
+td { border: 1px solid #dfe3ee; padding: 5pt 6pt; vertical-align: top; }
+tbody tr:nth-child(even) { background: #f7f8fb; }
+.toc { background: #f7f8fb; border: 1px solid #dfe3ee; border-radius: 6pt; padding: 12pt 18pt; }
+.toc ul { list-style: none; margin-left: 0; }
+.toc li { margin: 3pt 0; }
+.toc a::after { content: leader(".") target-counter(attr(href), page); }
+hr { border: 0; border-top: 1px solid #dfe3ee; margin: 14pt 0; }
+.page-break { page-break-after: always; }
